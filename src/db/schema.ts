@@ -14,7 +14,12 @@ export const users = sqliteTable("users", {
   id: id(),
   email: text("email").notNull().unique(), // login name, e.g. name@example.com or name@github
   name: text("name"),
+  /** Picture from the identity provider (e.g. Tailscale); used until the user uploads their own. */
   avatarUrl: text("avatar_url"),
+  /** Uploaded profile picture (file in DATA_DIR/photos/avatars). */
+  avatarFile: text("avatar_file"),
+  /** Set once the user has saved (or skipped) their profile; from then on the provider's name doesn't overwrite theirs. */
+  profileDone: integer("profile_done", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 });
 
@@ -298,3 +303,13 @@ export const rides = sqliteTable(
   },
   (t) => [index("rides_vehicle").on(t.vehicleId, t.rideDate)],
 );
+
+// ---------------------------------------------------------------------------
+// Invites sent from the app (the guest list itself lives in the Cloudflare Access policy).
+// ---------------------------------------------------------------------------
+
+export const invites = sqliteTable("invites", {
+  email: text("email").primaryKey(),
+  invitedBy: text("invited_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+});

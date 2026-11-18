@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -103,10 +103,12 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   const db = getDb();
   const existing = db.select().from(schema.users).where(eq(schema.users.email, email)).get();
   if (existing) {
-    if ((id.name && id.name !== existing.name) || (id.avatarUrl && id.avatarUrl !== existing.avatarUrl)) {
+    // The provider's name only fills in until the user has saved their own profile.
+    const name = existing.profileDone ? existing.name : (id.name ?? existing.name);
+    if (name !== existing.name || (id.avatarUrl && id.avatarUrl !== existing.avatarUrl)) {
       return db
         .update(schema.users)
-        .set({ name: id.name ?? existing.name, avatarUrl: id.avatarUrl ?? existing.avatarUrl })
+        .set({ name, avatarUrl: id.avatarUrl ?? existing.avatarUrl })
         .where(eq(schema.users.id, existing.id))
         .returning()
         .get();
@@ -120,4 +122,25 @@ export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) redirect("/no-access");
   return user;
+}
+
+/** Picture to show for a user: their upload, else the identity provider's, else none (initial letter). */
+export function avatarSrc(user: Pick<User, "id" | "avatarFile" | "avatarUrl">) {
+  if (user.avatarFile) return `/avatars/${user.id}?v=${encodeURIComponent(user.avatarFile)}`;
+  return user.avatarUrl;
+}
+
+/**
+ * Admins manage the guest list. MOTOLOG_ADMINS = comma-separated logins (e.g. "keen40@github");
+ * if unset, the first person who ever used the app is the admin.
+ */
+export function isAdmin(user: Pick<User, "id" | "email">) {
+  const list = (process.env.MOTOLOG_ADMINS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (list.length) return list.includes(user.email.toLowerCase());
+  // Insertion order (rowid), not created_at: that has 1-second resolution, so two users could tie.
+  const first = getDb().select({ id: schema.users.id }).from(schema.users).orderBy(sql`rowid`).limit(1).get();
+  return first?.id === user.id;
 }

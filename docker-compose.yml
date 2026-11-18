@@ -25,6 +25,10 @@ services:
       - CF_ACCESS_AUD=${CF_ACCESS_AUD:-}
       - PUBLIC_HOST=${PUBLIC_HOST:-}
       - IDENTITY_ALIASES=${IDENTITY_ALIASES:-}
+      - CF_API_TOKEN=${CF_API_TOKEN:-}
+      - CF_ACCOUNT_ID=${CF_ACCOUNT_ID:-}
+      - CF_ACCESS_POLICY_ID=${CF_ACCESS_POLICY_ID:-}
+      - MOTOLOG_ADMINS=${MOTOLOG_ADMINS:-}
     volumes:
       - ./data:/data
     restart: unless-stopped

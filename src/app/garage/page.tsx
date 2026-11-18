@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { listGarage, type GarageVehicle } from "@/lib/data";
 import { fill, getI18n } from "@/lib/i18n";
@@ -8,6 +9,8 @@ import { formatMoney } from "@/lib/zones";
 export default async function GaragePage() {
   const { lang, t } = await getI18n();
   const user = await requireUser();
+  // First time here: say hello and ask for a name and picture.
+  if (!user.profileDone) redirect("/profile?welcome=1");
   const vehicles = listGarage(user);
   const mine = vehicles.filter((v) => v.role === "owner");
   const shared = vehicles.filter((v) => v.role !== "owner");

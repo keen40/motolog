@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { setLang, switchDevUser } from "@/app/actions";
 import { authMode, DEV_USERS, getCurrentUser } from "@/lib/auth";
+import { Avatar } from "./Avatar";
 import { getI18n } from "@/lib/i18n";
 
 export async function Header() {
@@ -42,17 +43,10 @@ export async function Header() {
             </form>
           )}
           {user && (
-            <span className="flex items-center gap-2 text-sm" title={user.email}>
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-full" referrerPolicy="no-referrer" />
-              ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold uppercase">
-                  {(user.name ?? user.email).slice(0, 1)}
-                </span>
-              )}
+            <Link href="/profile" className="flex items-center gap-2 text-sm" title={`${t.profile.open} · ${user.email}`} aria-label={t.profile.open}>
+              <Avatar user={user} size={28} />
               <span className="hidden text-muted sm:inline">{user.name ?? user.email}</span>
-            </span>
+            </Link>
           )}
         </div>
       </div>

@@ -96,8 +96,17 @@ IDENTITY_ALIASES=you@gmail.com=keen40@github     # your Cloudflare e-mail → yo
 cd ~/motolog && docker compose up -d
 ```
 
-**Adding someone:** put their e-mail on the Access policy's guest list, then share a bike with that same
-e-mail in MotoLog (or let them add their own bikes). **Removing someone:** take them off the guest list.
+**Invites:** admins (`MOTOLOG_ADMINS`, or by default the first person who used the app) get a **People**
+section on their profile page: invite an e-mail, optionally share bikes with it, send the link, or remove
+someone. With the Cloudflare API connected, this edits the Access policy's e-mail list directly
+(read-modify-write; other rules are kept; it refuses to empty the list). Without it, invites are only noted
+in the app and you add the e-mail in the dashboard yourself. To connect it, add to `.env`:
+
+```
+CF_API_TOKEN=...          # My Profile → API Tokens → Create → Custom: Account · Access: Apps and Policies · Edit
+CF_ACCOUNT_ID=...
+CF_ACCESS_POLICY_ID=...   # the reusable "Family & friends" policy
+```
 
 ### Switching to Authentik later
 
