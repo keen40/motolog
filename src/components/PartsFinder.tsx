@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { addFitmentPart } from "@/app/garage/actions";
 import { useI18n } from "@/lib/i18n/client";
+import { shopQuery, type QueryPart } from "@/lib/shopQuery";
 import type { FitmentPart, Shop, ZoneId } from "@/lib/types";
 import { ZONES } from "@/lib/zones";
 import { SubmitButton } from "./SubmitButton";
@@ -30,7 +31,7 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
 
   const zonesWithParts = ZONES.filter((z) => parts.some((p) => p.zone === z));
   const list = zone === "all" ? parts : parts.filter((p) => p.zone === zone);
-  const modelToken = bikeName.split(" ").pop()!.toLowerCase();
+  const model = bikeName.split(" ").pop()!;
   const freeQuery = free.trim() ? `${bikeName} ${free.trim()}` : "";
 
   return (
@@ -39,7 +40,7 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
       <div className="card p-4">
         <h2 className="mb-2 font-semibold">{t.parts.searchAll}</h2>
         <input value={free} onChange={(e) => setFree(e.target.value)} placeholder={t.parts.searchPh} className="input" />
-        {freeQuery && <ShopLinks shops={shops} query={freeQuery} />}
+        {freeQuery && <ShopLinks shops={shops} free={freeQuery} model={model} />}
       </div>
 
       <div className="card p-4">
@@ -60,7 +61,6 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
         <ul className="space-y-2">
           {list.map((p) => {
             const isOpen = open === p.id;
-            const query = p.searchQuery.toLowerCase().includes(modelToken) ? p.searchQuery : `${p.searchQuery} ${bikeName}`;
             return (
               <li key={p.id} className="rounded-xl bg-surface-2">
                 <button onClick={() => setOpen(isOpen ? null : p.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
@@ -86,7 +86,7 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
                         {t.parts.brandSite} ↗
                       </a>
                     )}
-                    <ShopLinks shops={shops} query={query} />
+                    <ShopLinks shops={shops} part={p} model={model} />
                   </div>
                 )}
               </li>
@@ -96,7 +96,7 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
 
         <details className="mt-4">
           <summary className="cursor-pointer text-sm text-accent">+ {t.parts.addPart}</summary>
-          <form action={addFitmentPart.bind(null, vehicleId, modelId)} className="mt-3 grid gap-2 sm:grid-cols-2">
+          <form action={addFitmentPart.bind(null, vehicleId, modelId)} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <select name="zone" className="input" aria-label={t.event.zone} defaultValue={zone === "all" ? "other" : zone}>
               {ZONES.map((z) => (
                 <option key={z} value={z}>
@@ -119,31 +119,36 @@ export function PartsFinder({ vehicleId, modelId, bikeName, parts, shops, initia
   );
 }
 
-function ShopLinks({ shops, query }: { shops: Shop[]; query: string }) {
-  const { t } = useI18n();
+/** One link per shop; each searches in the shop's own language (see lib/shopQuery). */
+function ShopLinks({ shops, part, free, model }: { shops: Shop[]; part?: QueryPart; free?: string; model: string }) {
+  const { t, lang } = useI18n();
+  const queryFor = (shopLang: string) => (part ? shopQuery(part, model, shopLang) : free!);
   return (
     <div className="mt-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-        {t.parts.whereToBuy}: <span className="normal-case text-foreground">“{query}”</span>
+        {t.parts.whereToBuy}: <span className="normal-case text-foreground">“{queryFor(lang)}”</span>
       </p>
       <div className="flex flex-wrap gap-2">
         {shops
           .filter((s) => s.shipsTo.includes("HU"))
-          .map((s) => (
-            <a
-              key={s.id}
-              href={shopUrl(s, query)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs hover:border-accent"
-              title={s.country === "HU" ? s.name : `${s.name} – ${t.parts.shipsHu}`}
-            >
-              <span>{FLAGS[s.country] ?? "🌐"}</span>
-              {s.name}
-              <span className="uppercase text-muted">{s.language}</span>
-              <span className="text-muted">↗</span>
-            </a>
-          ))}
+          .map((s) => {
+            const q = queryFor(s.language);
+            return (
+              <a
+                key={s.id}
+                href={shopUrl(s, q)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs hover:border-accent"
+                title={`${s.country === "HU" ? s.name : `${s.name} – ${t.parts.shipsHu}`} · “${q}”`}
+              >
+                <span>{FLAGS[s.country] ?? "🌐"}</span>
+                {s.name}
+                <span className="uppercase text-muted">{s.language}</span>
+                <span className="text-muted">↗</span>
+              </a>
+            );
+          })}
       </div>
     </div>
   );

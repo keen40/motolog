@@ -21,11 +21,12 @@ export async function RidesPanel({ vehicleId, rides, editable, premix }: Props) 
     [t.rides.total, String(rides.length)],
     [t.rides.totalHours, h(total)],
     [t.rides.thisYear, h(thisYear)],
-    [t.rides.last, rides[0] ? formatDate(rides[0].rideDate, lang) : "—"],
+    // Short date so it fits the small tile on phones ("nov. 15.").
+    [t.rides.last, rides[0] ? new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : "en-GB", { month: "short", day: "numeric" }).format(new Date(rides[0].rideDate)) : "—"],
   ];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
       <div className="space-y-4 lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-xl text-sm text-muted">{t.rides.intro}</p>

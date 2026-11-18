@@ -100,7 +100,7 @@ const en = {
     titlePh: "e.g. New chain & sprockets",
     description: "Notes",
     date: "Date",
-    hours: "Engine hours at the time",
+    hours: "Engine hours",
     km: "Odometer (km)",
     cost: "Total cost",
     currency: "Currency",
@@ -155,6 +155,7 @@ const en = {
     verified: "verified by {n}",
     verify: "Confirm",
     unverify: "Undo",
+    groups: { engine: "Engine", fuel: "Fuel & carb", ignition: "Ignition", drivetrain: "Drivetrain", chassis: "Chassis & torques", suspension: "Suspension", brakes: "Brakes", wheels: "Wheels & tyres", fluids: "Fluids", dimensions: "Dimensions & weight" },
     seedNote:
       "Values come from the source shown under each one (mostly Yamaha's owner's service manual). Confirm the ones that match your bike, or correct them – your corrections are kept.",
     aiNote: "AI draft: these values were collected from the web by the AI and nobody has checked them yet. Follow the source links and confirm or correct.",

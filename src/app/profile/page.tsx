@@ -39,7 +39,7 @@ export default async function ProfilePage({ searchParams }: PageProps<"/profile"
             )}
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid items-end grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="name">
               {t.profile.name}

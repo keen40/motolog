@@ -157,6 +157,7 @@ const hu: Dict = {
     verified: "{n} motoros megerősítette",
     verify: "Megerősítem",
     unverify: "Visszavon",
+    groups: { engine: "Motor", fuel: "Üzemanyag és karburátor", ignition: "Gyújtás", drivetrain: "Erőátvitel", chassis: "Futómű és nyomatékok", suspension: "Rugózás", brakes: "Fékek", wheels: "Kerekek és gumik", fluids: "Folyadékok", dimensions: "Méretek és tömeg" },
     seedNote:
       "Az értékek forrása mindegyik alatt látható (főleg a Yamaha gyári szervizkönyve). Erősítsd meg, amelyik egyezik a motoroddal, vagy javítsd – a javításaid megmaradnak.",
     aiNote: "AI-vázlat: ezeket az értékeket az AI gyűjtötte a webről, és még senki nem ellenőrizte. Nézd meg a forrásokat, és erősítsd meg vagy javítsd.",

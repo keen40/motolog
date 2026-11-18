@@ -24,7 +24,7 @@ export function LookupForm({ disabled }: { disabled: "noKey" | "limit" | null })
         <h2 className="font-semibold">{t.catalogue.lookupTitle}</h2>
         <p className="text-xs text-muted">{t.catalogue.lookupHint}</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid items-end grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <label className="label" htmlFor="make">
             {t.catalogue.make} *

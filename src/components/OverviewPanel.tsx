@@ -25,7 +25,7 @@ export function OverviewPanel({ vehicleId, events, states, counts, schedule, cur
   const list = (zone ? events.filter((e) => e.zone === zone) : events).slice(0, 8);
 
   return (
-    <div className="grid gap-4 sm:gap-6 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5">
       <div className="card p-3 sm:p-4 lg:col-span-3">
         <div className="mb-2 flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold">{t.diagram.title}</h2>

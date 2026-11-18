@@ -8,14 +8,14 @@ import * as s from "./schema";
  * fitment listings from several retailers. Bump SEED_VERSION when you change this file: rows are
  * upserted by stable keys, values riders corrected are left alone, and rows removed here are deleted.
  */
-export const SEED_VERSION = "4";
+export const SEED_VERSION = "5";
 
 const SHOPS = [
   { name: "gmoto.hu", country: "HU", shipsTo: ["HU"], language: "hu", homepage: "https://gmoto.hu", searchUrlTemplate: "https://gmoto.hu/search?query={q}", sortOrder: 10 },
   { name: "gmoto.cz", country: "CZ", shipsTo: ["CZ", "SK", "HU"], language: "cs", homepage: "https://gmoto.cz", searchUrlTemplate: "https://gmoto.cz/search?query={q}", sortOrder: 20 },
   { name: "FC-Moto", country: "DE", shipsTo: ["DE", "AT", "HU", "CZ", "SK", "PL", "RO"], language: "hu", homepage: "https://www.fc-moto.com/hu-hu/", searchUrlTemplate: "https://www.fc-moto.com/hu-hu/search?search={q}", sortOrder: 30 },
   { name: "Motoshop.hu", country: "HU", shipsTo: ["HU"], language: "hu", homepage: "https://www.motoshop.hu", searchUrlTemplate: "https://www.motoshop.hu/shop_searchcomplex.php?search={q}", sortOrder: 40 },
-  { name: "eBay", country: "EU", shipsTo: ["HU", "CZ", "SK", "DE", "AT"], language: "en", homepage: "https://www.ebay.de", searchUrlTemplate: "https://www.ebay.de/sch/i.html?_nkw={q}", sortOrder: 90 },
+  { name: "eBay", country: "EU", shipsTo: ["HU", "CZ", "SK", "DE", "AT"], language: "de", homepage: "https://www.ebay.de", searchUrlTemplate: "https://www.ebay.de/sch/i.html?_nkw={q}", sortOrder: 90 },
 ];
 
 type SpecSeed = [key: string, group: string, zone: string, en: string, hu: string, value: string, source: string];

@@ -75,7 +75,7 @@ export async function TuningPanel({ vehicleId, sheets, stock, editable, compare 
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
         {/* Current setup */}
         <div className="card h-fit p-4 lg:col-span-2">
           <h2 className="font-semibold">{t.tuning.current}</h2>

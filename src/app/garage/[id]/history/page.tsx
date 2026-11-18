@@ -78,9 +78,9 @@ export default async function HistoryPage({ params }: PageProps<"/garage/[id]/hi
             [t.history.jobs, String(done.length)],
             [t.history.since, firstDate ? formatDate(firstDate, lang) : "—"],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-lg border border-zinc-200 p-2.5">
+            <div key={k} className="min-w-0 rounded-lg border border-zinc-200 p-2.5">
               <p className="text-[11px] uppercase tracking-wide text-zinc-500">{k}</p>
-              <p className="text-base font-semibold">{v}</p>
+              <p className="text-sm font-semibold break-words sm:text-base">{v}</p>
             </div>
           ))}
         </section>
@@ -164,7 +164,7 @@ export default async function HistoryPage({ params }: PageProps<"/garage/[id]/hi
         {schedule.length > 0 && (
           <section className="break-inside-avoid">
             <h2 className="mb-2 text-base font-bold">{t.history.schedule}</h2>
-            <ul className="grid gap-x-6 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
               {schedule.map((r) => (
                 <li key={r.interval.id} className="flex justify-between gap-2 border-b border-dotted border-zinc-200 py-0.5">
                   <span>

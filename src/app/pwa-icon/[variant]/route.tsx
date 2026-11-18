@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOGO_AMBER, LOGO_PATHS } from "@/lib/logo";
 
 // App icons for the home screen, rendered once at build time.
 //   any-192 / any-512   rounded icon
@@ -32,14 +33,15 @@ export async function GET(_req: Request, ctx: RouteContext<"/pwa-icon/[variant]"
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#f59e0b",
+          background: LOGO_AMBER,
           borderRadius: v.radius * v.size,
         }}
       >
-        <svg width={g} height={g} viewBox="4 6 24 20">
-          <circle cx="10" cy="20" r="5" fill="none" stroke="#000" strokeWidth="2.2" />
-          <circle cx="23" cy="20" r="5" fill="none" stroke="#000" strokeWidth="2.2" />
-          <path d="M10 20 L15 12 L21 12 L23 20 M15 12 L13 9" fill="none" stroke="#000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* viewBox = the helmet's own bounds (centre ≈ 17.3, 16), so it fills the glyph area */}
+        <svg width={g} height={g} viewBox="5.3 5 24 22">
+          {LOGO_PATHS.map((p, i) => (
+            <path key={i} d={p.d} fill={p.fill} stroke={p.stroke} strokeWidth={p.strokeWidth} strokeLinecap="round" />
+          ))}
         </svg>
       </div>
     ),

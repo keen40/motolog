@@ -46,7 +46,7 @@ export function StatsCharts({ events }: { events: VehicleEvent[] }) {
   if (!events.length) return <div className="card p-10 text-center text-muted">{t.stats.noData}</div>;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="card p-4">
         <h3 className="mb-3 font-semibold">{t.stats.byCategory}</h3>
         {byZone.length ? (

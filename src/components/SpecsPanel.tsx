@@ -34,7 +34,7 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
   const bikeName = `${model.make} ${model.model}`;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div className="space-y-4 lg:col-span-2">
         <div className="card p-4">
           <h2 className="mb-1 font-semibold">{t.specs.title}</h2>
@@ -46,16 +46,17 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
             {grouped.map(([group, list]) => (
               <div key={group}>
                 <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {GROUP_ICONS[group]} {group}
+                  {GROUP_ICONS[group]} {t.specs.groups[group as keyof typeof t.specs.groups] ?? group}
                 </h3>
                 <dl className="divide-y divide-border rounded-xl bg-surface-2">
                   {list.map((s) => {
                     const n = s.verifiedBy.length;
                     const mine = s.verifiedBy.includes(userId);
                     return (
-                      <div key={s.id} className="flex items-start gap-3 px-3 py-2">
-                        <dt className="w-32 shrink-0 text-xs text-muted">{lang === "hu" ? s.labelHu : s.labelEn}</dt>
-                        <dd className="min-w-0 flex-1 text-sm">
+                      // Phone: name + buttons on one line, the value full width below. Wider: three columns.
+                      <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-3 py-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
+                        <dt className="self-center text-xs text-muted sm:self-start">{lang === "hu" ? s.labelHu : s.labelEn}</dt>
+                        <dd className="col-span-2 row-start-2 min-w-0 text-sm break-words sm:col-span-1 sm:col-start-2 sm:row-start-1">
                           {s.value}
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px]">
                             <span className={n ? "text-emerald-400" : "text-amber-400/80"}>
@@ -64,7 +65,7 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
                             {s.source && <SourceText source={s.source} />}
                           </div>
                         </dd>
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 sm:col-start-3 sm:flex-col sm:items-end sm:gap-1">
                           <form action={toggleSpecVerification.bind(null, vehicleId, s.id, mine)}>
                             <button className={`rounded-md px-2 py-0.5 text-[11px] ${mine ? "text-muted hover:text-foreground" : "bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/70"}`}>
                               {mine ? t.specs.unverify : t.specs.verify}
@@ -72,7 +73,7 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
                           </form>
                           <details className="text-right">
                             <summary className="cursor-pointer list-none text-[11px] text-muted hover:text-foreground">✎</summary>
-                            <form action={updateSpecValue.bind(null, vehicleId, s.id)} className="mt-1 flex w-56 flex-col gap-1">
+                            <form action={updateSpecValue.bind(null, vehicleId, s.id)} className="mt-1 flex w-56 max-w-[70vw] flex-col gap-1">
                               <input name="value" required defaultValue={s.value} className="input py-1 text-xs" aria-label={t.specs.value} />
                               <input name="source" placeholder={t.specs.source} className="input py-1 text-xs" />
                               <SubmitButton className="btn-ghost py-1 text-xs">{t.specs.edit}</SubmitButton>
@@ -93,7 +94,7 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
               <select name="spec_group" className="input" aria-label={t.specs.group}>
                 {GROUPS.map((g) => (
                   <option key={g} value={g}>
-                    {g}
+                    {t.specs.groups[g as keyof typeof t.specs.groups] ?? g}
                   </option>
                 ))}
               </select>

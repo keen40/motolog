@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { setLang, switchDevUser } from "@/app/actions";
 import { authMode, DEV_USERS, getCurrentUser } from "@/lib/auth";
+import { LOGO_AMBER, LOGO_PATHS, LOGO_SHIFT } from "@/lib/logo";
 import { Avatar } from "./Avatar";
 import { getI18n } from "@/lib/i18n";
 
@@ -11,15 +12,15 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-30 print:hidden border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-        <Link href="/garage" className="flex items-center gap-2 font-semibold">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-4">
+        <Link href="/garage" className="flex shrink-0 items-center gap-2 font-semibold">
           <Logo />
           <span>{t.app.name}</span>
         </Link>
-        <Link href="/catalogue" className="text-sm text-muted hover:text-foreground">
+        <Link href="/catalogue" className="min-w-0 truncate text-sm text-muted hover:text-foreground">
           {t.catalogue.nav}
         </Link>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <form action={setLang} className="flex rounded-lg border border-border p-0.5 text-xs">
             {(["hu", "en"] as const).map((l) => (
               <button
@@ -37,7 +38,8 @@ export async function Header() {
               <span className="chip bg-amber-900/40 text-amber-300">dev</span>
               {DEV_USERS.filter((e) => e !== user.email).map((e) => (
                 <button key={e} name="email" value={e} className="text-muted hover:text-foreground" title="Switch test user">
-                  → {e.split("@")[0]}
+                  → <span className="hidden sm:inline">{e.split("@")[0]}</span>
+                  <span className="sm:hidden">{e.slice(0, 1)}</span>
                 </button>
               ))}
             </form>
@@ -57,10 +59,12 @@ export async function Header() {
 export function Logo({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <rect width="32" height="32" rx="8" fill="var(--accent)" />
-      <circle cx="10" cy="20" r="5" fill="none" stroke="#000" strokeWidth="2.2" />
-      <circle cx="23" cy="20" r="5" fill="none" stroke="#000" strokeWidth="2.2" />
-      <path d="M10 20 L15 12 L21 12 L23 20 M15 12 L13 9" fill="none" stroke="#000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="32" height="32" rx="8" fill={LOGO_AMBER} />
+      <g transform={`translate(${LOGO_SHIFT.x} ${LOGO_SHIFT.y})`}>
+        {LOGO_PATHS.map((p, i) => (
+          <path key={i} d={p.d} fill={p.fill} stroke={p.stroke} strokeWidth={p.strokeWidth} strokeLinecap="round" />
+        ))}
+      </g>
     </svg>
   );
 }

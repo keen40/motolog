@@ -27,7 +27,7 @@ export async function RideForm({ vehicleId, rideId, initial, sheets, engineHours
   const { t } = await getI18n();
   return (
     <form action={saveRide.bind(null, vehicleId, rideId)} className="card space-y-4 p-4 sm:p-6">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid items-end grid-cols-2 gap-3">
         <div>
           <label className="label" htmlFor="ride_date">
             {t.rides.date}

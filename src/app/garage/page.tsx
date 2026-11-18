@@ -60,7 +60,7 @@ export default async function GaragePage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {mine.map((v) => (
             <Card key={v.id} v={v} />
           ))}
@@ -70,7 +70,7 @@ export default async function GaragePage() {
       {shared.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">{t.garage.shared}</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shared.map((v) => (
               <Card key={v.id} v={v} />
             ))}

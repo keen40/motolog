@@ -31,7 +31,7 @@ export async function TuningForm({ vehicleId, sheetId, initial, stock }: Props) 
 
   return (
     <form action={saveTuningSheet.bind(null, vehicleId, sheetId)} className="card space-y-6 p-4 sm:p-6">
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid items-end grid-cols-1 gap-3 sm:grid-cols-4">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="title">
             {t.tuning.sheetTitle}
@@ -54,7 +54,7 @@ export async function TuningForm({ vehicleId, sheetId, initial, stock }: Props) 
 
       <fieldset>
         <legend className="mb-2 font-semibold">{t.tuning.conditions}</legend>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="grid items-end grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="col-span-2">
             <label className="label" htmlFor="track">
               {t.tuning.track}
@@ -99,7 +99,7 @@ export async function TuningForm({ vehicleId, sheetId, initial, stock }: Props) 
         <fieldset key={g}>
           <legend className="mb-2 font-semibold">{t.tuning.groups[g]}</legend>
           {(g === "fork" || g === "shock") && <p className="-mt-1 mb-2 text-xs text-muted">{t.tuning.clicksOutHint}</p>}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid items-end grid-cols-2 gap-3 sm:grid-cols-3">
             {TUNING_FIELDS.filter((f) => f.group === g).map((f) => {
               const s = stock?.values[f.key];
               const unit = unitLabel(f.unit, lang);

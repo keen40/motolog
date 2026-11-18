@@ -26,15 +26,15 @@ export function PlanBoard({ vehicleId, events, editable }: { vehicleId: string; 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{t.plans.empty}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 text-sm text-muted">{t.plans.empty}</p>
         {editable && (
-          <Link href={`/garage/${vehicleId}/log?kind=plan`} className="btn-primary">
+          <Link href={`/garage/${vehicleId}/log?kind=plan`} className="btn-primary shrink-0 whitespace-nowrap">
             + {t.plans.add}
           </Link>
         )}
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {COLUMNS.map((col) => {
           const cards = items.filter((e) => (e.planStatus ?? "idea") === col);
           const total = cards.reduce((s, e) => s + Number(e.cost ?? 0), 0);

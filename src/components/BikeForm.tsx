@@ -70,13 +70,13 @@ export function BikeForm({ models, action, initial, defaultModelId }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid items-end grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label={t.newBike.make} name="make" required={custom} readOnly={!custom} defaultValue={make} key={`make-${modelId}`} />
         <Field label={t.newBike.model} name="model" required={custom} readOnly={!custom} defaultValue={model} key={`model-${modelId}`} />
         <Field label={t.newBike.year} name="year" type="number" inputMode="numeric" required min={1950} max={2100} defaultValue={year} key={`year-${modelId}`} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-end grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t.newBike.nickname} name="nickname" defaultValue={initial?.nickname ?? ""} />
         <Field label={t.newBike.vin} name="vin" defaultValue={initial?.vin ?? ""} />
         <Field label={t.newBike.hours} name="engine_hours" type="number" inputMode="decimal" step="0.1" min={0} defaultValue={initial?.engineHours ?? ""} />

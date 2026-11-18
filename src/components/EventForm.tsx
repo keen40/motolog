@@ -52,7 +52,7 @@ export function EventForm({ vehicleId, event, defaults, intervals, photos }: Pro
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="title">
             {t.event.title}
@@ -107,7 +107,7 @@ export function EventForm({ vehicleId, event, defaults, intervals, photos }: Pro
               </label>
               <input id="event_date" name="event_date" type="date" defaultValue={event?.eventDate ?? today} className="input" />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 items-end gap-2">
               <div>
                 <label className="label" htmlFor="engine_hours">
                   {t.event.hours}
@@ -163,7 +163,7 @@ export function EventForm({ vehicleId, event, defaults, intervals, photos }: Pro
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="cost">
             {t.event.cost}
