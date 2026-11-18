@@ -86,6 +86,27 @@ const STOCK_MEANINGS: Record<string, string> = {
   sprocket_f: "front sprocket teeth",
   sprocket_r: "rear sprocket teeth",
 };
+/**
+ * Shops that sell manuals: their pages describe a manual but don't show its contents,
+ * so values "sourced" there are guesses. Blocked in search and dropped from results.
+ */
+export const BLOCKED_SOURCE_DOMAINS = [
+  "emanualonline.com",
+  "aservicemanualpdf.com",
+  "haynes.com",
+  "clymer.com",
+  "cyclepedia.com",
+  "repairmanual.com",
+  "servicemanuals.net",
+  "factorymanualsonline.com",
+  "manualsdepot.com",
+];
+
+function blockedSource(u: string | null) {
+  const h = host(u);
+  return !!h && BLOCKED_SOURCE_DOMAINS.some((d) => h === d || h.endsWith(`.${d}`));
+}
+
 /** Race-based manual intervals are converted at this many riding hours per race. */
 export const HOURS_PER_RACE = 2;
 
@@ -257,7 +278,7 @@ Rules:
 - Only state a value if a source gives it for THIS model year (or a year range that includes it). Never guess. Plain values, metric units, under 160 characters.
 - Language: value, notes_en, summary_en, identified.note and warnings in English with "." as the decimal point (values are shown in both languages). Only label_hu, notes_hu and summary_hu in Hungarian.
 - Market: ${i.market}. Manuals often cover several markets and mark the differences with footnotes or columns (e.g. "*For EUROPE", "USA, CDN" vs "EUROPE"). Always take the ${i.market} value for the main fields; mention other markets' values in the text only where the field explains it. Double-check spring rates, spring lengths, jetting, gearing and clicker positions for this.
-- Put the page you used in source_url for every item.
+- source_url must be a page whose own content shows that exact value for this model (a manual page, spec table, parts diagram row, fitment list). Never cite a page that only sells or advertises a manual, a search/category page, or a page about a different part or model. If no readable page shows a value, leave it out – a missing value is fine, a weakly sourced one is not.
 - If the requested model/year looks wrong, set identified.matches_request=false and explain in identified.note.
 
 specs – read the manual's specification chapter and fill as many of these as it states (key: what):
@@ -294,7 +315,7 @@ async function callOpenAI(input: LookupInput) {
       model: cfg.model,
       instructions,
       input: userInput,
-      tools: [{ type: "web_search", search_context_size: "medium" }],
+      tools: [{ type: "web_search", search_context_size: "medium", filters: { blocked_domains: BLOCKED_SOURCE_DOMAINS } }],
       max_tool_calls: cfg.maxSearches,
       include: ["web_search_call.action.sources"],
       max_output_tokens: 16000,
@@ -398,19 +419,28 @@ export function dedupeIntervals<T extends { task_key: string; hours: number | nu
 }
 
 const httpUrl = (u: string | null) => (u && /^https?:\/\//i.test(u) ? u : null);
-const host = (u: string | null) => {
+function host(u: string | null) {
   try {
-    return u ? new URL(u).hostname : null;
+    return u ? new URL(u).hostname.replace(/^www\./, "") : null;
   } catch {
     return null;
   }
-};
+}
 const aiSource = (u: string | null) => (httpUrl(u) ? `AI · ${u}` : "AI · no source");
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
 /** Writes an AI result into the catalogue as unverified data. Rows riders corrected are kept. */
-function applyResult(tx: Tx, modelId: string, r: LookupResult, input: LookupInput) {
+function applyResult(tx: Tx, modelId: string, raw: LookupResult, input: LookupInput) {
+  const ok = <T extends { source_url: string | null }>(x: T) => !blockedSource(x.source_url);
+  const r: LookupResult = {
+    ...raw,
+    specs: raw.specs.filter(ok),
+    intervals: raw.intervals.filter(ok),
+    parts: raw.parts.filter(ok),
+    stock_setup: raw.stock_setup.filter(ok),
+    manual_url: blockedSource(raw.manual_url) ? null : raw.manual_url,
+  };
   const zone = (z: string) => (ZONES.includes(z as never) ? z : "other");
   tx.update(s.vehicleModels)
     .set({
