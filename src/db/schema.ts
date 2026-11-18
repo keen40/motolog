@@ -88,6 +88,7 @@ export const serviceIntervals = sqliteTable(
     labelHu: text("label_hu").notNull(),
     intervalHours: real("interval_hours"),
     intervalKm: real("interval_km"),
+    intervalMonths: integer("interval_months"),
     notesEn: text("notes_en"),
     notesHu: text("notes_hu"),
   },

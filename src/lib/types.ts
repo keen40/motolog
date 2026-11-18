@@ -82,6 +82,7 @@ export type ServiceInterval = {
   labelHu: string;
   intervalHours: number | null;
   intervalKm: number | null;
+  intervalMonths: number | null;
   notesEn: string | null;
   notesHu: string | null;
 };

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { fill, useI18n } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { dueText } from "@/lib/scheduleText";
 import type { ScheduleRow } from "@/lib/schedule";
 import type { VehicleEvent, ZoneId } from "@/lib/types";
 import { formatDate, formatMoney, KIND_COLORS } from "@/lib/zones";
@@ -98,20 +99,19 @@ export function OverviewPanel({ vehicleId, events, states, counts, schedule, cur
 
 export function ScheduleBar({ row }: { row: ScheduleRow }) {
   const { t, lang } = useI18n();
-  const total = Number(row.interval.intervalHours ?? 0);
-  const pct = row.remaining == null || !total ? 0 : Math.min(100, Math.max(0, ((total - row.remaining) / total) * 100));
-  const overdue = row.remaining != null && row.remaining < 0;
-  const color = overdue ? "#f87171" : pct > 75 ? "#f59e0b" : "#34d399";
+  const pct = row.used ?? 0;
+  const color = row.overdue ? "#f87171" : pct > 75 ? "#f59e0b" : "#34d399";
+  const status = dueText(row, t);
   return (
     <li>
-      <div className="flex justify-between text-sm">
+      <div className="flex justify-between gap-2 text-sm">
         <span>{lang === "hu" ? row.interval.labelHu : row.interval.labelEn}</span>
-        <span className={`text-xs ${row.remaining == null ? "text-muted" : ""}`} style={{ color: row.remaining == null ? undefined : color }}>
-          {row.remaining == null ? (row.lastDate || row.lastHours != null ? "" : t.stats.never) : overdue ? `${t.stats.overdue} (${-row.remaining} h)` : fill(t.stats.inHours, { n: row.remaining })}
+        <span className={`shrink-0 text-xs ${row.used == null ? "text-muted" : ""}`} style={{ color: row.used == null ? undefined : color }}>
+          {status}
         </span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full" style={{ width: `${row.remaining == null ? 0 : overdue ? 100 : pct}%`, background: color }} />
+        <div className="h-full rounded-full" style={{ width: `${row.overdue ? 100 : pct}%`, background: color }} />
       </div>
     </li>
   );

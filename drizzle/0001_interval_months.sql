@@ -1,0 +1,1 @@
+ALTER TABLE `service_intervals` ADD `interval_months` integer;

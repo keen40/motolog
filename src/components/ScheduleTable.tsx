@@ -1,5 +1,6 @@
-import { fill, getI18n } from "@/lib/i18n";
+import { getI18n } from "@/lib/i18n";
 import type { ScheduleRow } from "@/lib/schedule";
+import { dueText, intervalText } from "@/lib/scheduleText";
 import { formatDate } from "@/lib/zones";
 
 export async function ScheduleTable({ schedule, currentHours }: { schedule: ScheduleRow[]; currentHours: number | null }) {
@@ -21,8 +22,9 @@ export async function ScheduleTable({ schedule, currentHours }: { schedule: Sche
             </tr>
           </thead>
           <tbody>
-            {schedule.map(({ interval, lastHours, lastDate, dueAt, remaining }) => {
-              const overdue = remaining != null && remaining < 0;
+            {schedule.map((row) => {
+              const { interval, lastHours, lastDate, dueAt, dueDate, overdue, used } = row;
+              const status = dueText(row, t);
               return (
                 <tr key={interval.id} className="border-t border-border">
                   <td className="px-4 py-2">
@@ -31,17 +33,13 @@ export async function ScheduleTable({ schedule, currentHours }: { schedule: Sche
                       <p className="text-xs text-muted">{lang === "hu" ? interval.notesHu : interval.notesEn}</p>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-muted">{interval.intervalHours} h</td>
+                  <td className="whitespace-nowrap px-4 py-2 text-muted">{intervalText(interval, t)}</td>
                   <td className="px-4 py-2 text-muted">
                     {lastHours != null || lastDate ? `${lastHours != null ? `${lastHours} h` : ""} ${formatDate(lastDate, lang)}` : t.stats.never}
                   </td>
-                  <td className={`px-4 py-2 font-medium ${overdue ? "text-red-400" : remaining != null && remaining < 3 ? "text-amber-400" : ""}`}>
-                    {dueAt != null && `${dueAt} h`}
-                    {remaining != null && (
-                      <span className="ml-1 text-xs font-normal">
-                        ({overdue ? t.stats.overdue : fill(t.stats.inHours, { n: remaining })})
-                      </span>
-                    )}
+                  <td className={`px-4 py-2 font-medium ${overdue ? "text-red-400" : used != null && used > 75 ? "text-amber-400" : ""}`}>
+                    {[dueAt != null ? `${dueAt} h` : null, dueDate ? formatDate(dueDate, lang) : null].filter(Boolean).join(" / ")}
+                    {status && status !== t.stats.never && <span className="ml-1 text-xs font-normal">({status})</span>}
                   </td>
                 </tr>
               );

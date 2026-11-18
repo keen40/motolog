@@ -54,11 +54,11 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
                         <dt className="w-32 shrink-0 text-xs text-muted">{lang === "hu" ? s.labelHu : s.labelEn}</dt>
                         <dd className="min-w-0 flex-1 text-sm">
                           {s.value}
-                          <div className="mt-0.5 flex items-center gap-2 text-[11px]">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px]">
                             <span className={n ? "text-emerald-400" : "text-amber-400/80"}>
                               {n ? `✓ ${fill(t.specs.verified, { n })}` : `⚠ ${t.specs.unverified}`}
                             </span>
-                            {s.source && !s.isSeed && <span className="text-muted">· {s.source}</span>}
+                            {s.source && <span className="text-muted">· {s.source}</span>}
                           </div>
                         </dd>
                         <div className="flex flex-col items-end gap-1">
