@@ -15,6 +15,11 @@ services:
       - AUTH_MODE=${AUTH_MODE:-tailscale}
       # Listen on the container interface; the host side is still loopback-only (see ports).
       - HOSTNAME=0.0.0.0
+      # AI catalogue lookups (optional) – set these in .env next to this file
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-6-luna}
+      - AI_MONTHLY_LOOKUPS=${AI_MONTHLY_LOOKUPS:-20}
+      - AI_MAX_SEARCHES=${AI_MAX_SEARCHES:-12}
     volumes:
       - ./data:/data
     restart: unless-stopped

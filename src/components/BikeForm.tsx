@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import { PhotoInput } from "./PhotoInput";
@@ -25,12 +26,16 @@ type Props = {
   models: ModelOption[];
   action: (formData: FormData) => void | Promise<void>;
   initial?: BikeValues;
+  /** Preselected catalogue model when adding (e.g. coming from the catalogue). */
+  defaultModelId?: string;
 };
 
 /** Create / edit form for a bike. */
-export function BikeForm({ models, action, initial }: Props) {
+export function BikeForm({ models, action, initial, defaultModelId }: Props) {
   const { t } = useI18n();
-  const [modelId, setModelId] = useState<string>(initial ? (initial.modelId ?? "") : (models[0]?.id ?? ""));
+  const [modelId, setModelId] = useState<string>(
+    initial ? (initial.modelId ?? "") : models.some((m) => m.id === defaultModelId) ? defaultModelId! : (models[0]?.id ?? ""),
+  );
   const [removePhoto, setRemovePhoto] = useState(false);
   const custom = modelId === "";
   const selected = models.find((m) => m.id === modelId);
@@ -55,7 +60,14 @@ export function BikeForm({ models, action, initial }: Props) {
           ))}
           <option value="">{t.newBike.custom}</option>
         </select>
-        <p className="mt-1 text-xs text-muted">{t.newBike.catalogHint}</p>
+        <p className="mt-1 text-xs text-muted">
+          {t.newBike.catalogHint}{" "}
+          {!initial && (
+            <Link href="/catalogue#lookup" className="text-accent hover:underline">
+              {t.catalogue.notListed} {t.catalogue.lookItUp} →
+            </Link>
+          )}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

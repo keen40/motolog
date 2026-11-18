@@ -89,13 +89,26 @@ After changing `src/db/schema.ts`, create a migration with `npx drizzle-kit gene
 
 | Data | Source |
 | --- | --- |
-| Model specs | Seeded starter values shown as *unverified* until someone confirms them against their manual. Anyone can correct a value (with a source) or add specs. |
-| Service intervals | Typical intervals per model, used for the “due in X h” schedule. |
-| Compatible parts | Seeded brand suggestions + your own. OEM part numbers: use the linked CMSNL parts catalogue. |
+| Yamaha YZ125 2001 | Checked by hand against Yamaha's owner's service manual (`src/db/seed.ts`, page cited on every value). |
+| Other models | **AI lookup** (Catalogue → *Look up a model*): one OpenAI call with web search fills specs, service intervals, parts and the stock setup. Stored as an *AI draft – unverified* with a source link per value; everyone reuses it. |
+| Corrections | Anyone can confirm or correct a value. Corrections are never overwritten by a re-seed or a new AI lookup. |
 | Shops | Search-link templates (`{q}` → query) for shops that ship to Hungary. No APIs, no scraping. |
 
-To add another model, add a block like `YZ125_2001` in `src/db/seed.ts` and bump `SEED_VERSION`.
-Seed rows are upserted by stable keys, so your data and confirmations survive.
+### AI lookups
+
+Add to `~/motolog/.env` on the server, then `docker compose up -d`:
+
+```
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-6-luna      # optional
+AI_MONTHLY_LOOKUPS=20        # optional hard cap per month
+```
+
+- Make, model, displacement and year are required; the market (Europe/USA) matters for jetting and gearing.
+- A lookup for a model that already has checked data (like the YZ125) is **not** written into the catalogue –
+  its page shows the AI result next to the existing values. That's how to judge the AI's accuracy.
+- Cost on `gpt-6-luna`: roughly $0.10–0.15 per lookup (mostly the $0.01 web searches). The catalogue page shows
+  this month's count and estimated cost.
 
 ## Layout
 

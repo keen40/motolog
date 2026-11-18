@@ -15,6 +15,9 @@ export async function Header() {
           <Logo />
           <span>{t.app.name}</span>
         </Link>
+        <Link href="/catalogue" className="text-sm text-muted hover:text-foreground">
+          {t.catalogue.nav}
+        </Link>
         <div className="ml-auto flex items-center gap-3">
           <form action={setLang} className="flex rounded-lg border border-border p-0.5 text-xs">
             {(["hu", "en"] as const).map((l) => (

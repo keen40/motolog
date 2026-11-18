@@ -40,6 +40,7 @@ export type VehicleModel = {
   partsCatalogUrl: string | null;
   ownersManualUrl: string | null;
   stockSetup: StockSetup | null;
+  dataOrigin: string;
 };
 
 export type StockSetup = { source: string; values: Record<string, string> };
@@ -84,6 +85,7 @@ export type VehicleEvent = {
 
 export type ModelSpec = {
   id: string;
+  seedKey: string | null;
   specGroup: string;
   zone: string | null;
   labelEn: string;

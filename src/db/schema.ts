@@ -44,6 +44,8 @@ export const vehicleModels = sqliteTable(
     partsCatalogUrl: text("parts_catalog_url"),
     ownersManualUrl: text("owners_manual_url"),
     /** Factory suspension/carb setup: { source, values: { main_jet: "450", ... } } – see lib/tuning.ts. */
+    /** Where the reference data came from: "seed" (checked by hand, see db/seed.ts) or "ai" (unverified draft). */
+    dataOrigin: text("data_origin").notNull().default("seed"),
     stockSetup: text("stock_setup", { mode: "json" }).$type<{ source: string; values: Record<string, string> }>(),
     createdAt: createdAt(),
   },
@@ -232,4 +234,44 @@ export const tuningSheets = sqliteTable(
     updatedAt: text("updated_at"),
   },
   (t) => [index("tuning_sheets_vehicle").on(t.vehicleId, t.sheetDate)],
+);
+
+// ---------------------------------------------------------------------------
+// AI catalogue lookups (OpenAI + web search). One row per run, kept for the
+// usage counter and so a result can be compared with existing data.
+// ---------------------------------------------------------------------------
+
+export type LookupInput = {
+  make: string;
+  model: string;
+  year: number;
+  engineCc: number;
+  stroke: number | null;
+  category: string | null;
+  market: string;
+};
+
+export const aiLookups = sqliteTable(
+  "ai_lookups",
+  {
+    id: id(),
+    modelId: text("model_id").references(() => vehicleModels.id, { onDelete: "set null" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    input: text("input", { mode: "json" }).$type<LookupInput>().notNull(),
+    /** queued | running | done | failed */
+    status: text("status").notNull().default("queued"),
+    /** true: result was written into the catalogue; false: kept for comparison only. */
+    apply: integer("apply", { mode: "boolean" }).notNull().default(true),
+    result: text("result", { mode: "json" }).$type<unknown>(),
+    sources: text("sources", { mode: "json" }).$type<string[]>(),
+    error: text("error"),
+    aiModel: text("ai_model"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    searchCalls: integer("search_calls"),
+    costUsd: real("cost_usd"),
+    createdAt: createdAt(),
+    finishedAt: text("finished_at"),
+  },
+  (t) => [index("ai_lookups_created").on(t.createdAt)],
 );

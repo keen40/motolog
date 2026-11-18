@@ -38,6 +38,9 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
       <div className="space-y-4 lg:col-span-2">
         <div className="card p-4">
           <h2 className="mb-1 font-semibold">{t.specs.title}</h2>
+          {model.dataOrigin === "ai" && (
+            <p className="mb-2 rounded-xl bg-violet-950/40 px-3 py-2 text-xs text-violet-200">🤖 {t.specs.aiNote}</p>
+          )}
           <p className="mb-4 text-xs text-muted">{t.specs.seedNote}</p>
           <div className="space-y-4">
             {grouped.map(([group, list]) => (
@@ -58,7 +61,7 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
                             <span className={n ? "text-emerald-400" : "text-amber-400/80"}>
                               {n ? `✓ ${fill(t.specs.verified, { n })}` : `⚠ ${t.specs.unverified}`}
                             </span>
-                            {s.source && <span className="text-muted">· {s.source}</span>}
+                            {s.source && <SourceText source={s.source} />}
                           </div>
                         </dd>
                         <div className="flex flex-col items-end gap-1">
@@ -127,5 +130,23 @@ export async function SpecsPanel({ vehicleId, model, specs, parts, shops, userId
         <PartsFinder vehicleId={vehicleId} modelId={model.id} bikeName={bikeName} parts={parts} shops={shops} initialZone={zone} />
       </div>
     </div>
+  );
+}
+
+/** "AI · https://site/page" → "AI · site" as a link; plain text otherwise. */
+function SourceText({ source }: { source: string }) {
+  const m = source.match(/https?:\/\/\S+/);
+  if (!m) return <span className="text-muted">· {source}</span>;
+  let host = m[0];
+  try {
+    host = new URL(m[0]).hostname.replace(/^www\./, "");
+  } catch {}
+  return (
+    <span className="text-muted">
+      · {source.slice(0, m.index).trim()}{" "}
+      <a href={m[0]} target="_blank" rel="noreferrer noopener" className="text-accent hover:underline">
+        {host}
+      </a>
+    </span>
   );
 }
