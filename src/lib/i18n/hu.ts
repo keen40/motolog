@@ -9,10 +9,11 @@ const hu: Dict = {
     title: "Ki vagy?",
     tailscale: "A MotoLog a Tailscale-en keresztül azonosít. Nyisd meg a tailnet címén (https://motolog.<tailneted>.ts.net) egy olyan eszközről, amely be van lépve a tailnetedbe.",
     sso: "A MotoLog-ot az SSO proxyn keresztül kell megnyitni. Jelentkezz be ott, és próbáld újra.",
+    public: "Nem sikerült ellenőrizni a belépésedet. Töltsd újra az oldalt, és lépj be újra az e-mailes kóddal – ha továbbra sem megy, kérd meg a tulajdonost, hogy vegye fel az e-mail-címedet a vendéglistára.",
   },
   share: {
     title: "Megosztás",
-    hint: "Oszd meg a motort a családdal vagy barátokkal a Tailscale-belépésük (e-mail) alapján. A következő megnyitáskor látni fogják.",
+    hint: "Oszd meg a motort azzal az e-mail-címmel, amellyel belépnek (a Cloudflare-belépés e-mail-címe vagy a Tailscale-azonosítójuk). A következő megnyitáskor látni fogják.",
     email: "Belépési e-mail",
     viewer: "Megtekintheti",
     editor: "Szerkesztheti",

@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getDb, schema } from "@/db";
+import { accessConfig, identityAliases, verifyAccessJwt } from "./cfAccess";
 
 /**
  * Who is using the app. There is no login screen: identity comes from whatever sits in front of the app.
@@ -16,8 +17,12 @@ import { getDb, schema } from "@/db";
  *  AUTH_MODE=dev (default in `npm run dev`)
  *      Uses DEV_USER_EMAIL, switchable with the "dev_user" cookie to test sharing locally.
  *
+ * Optionally, at the same time: Cloudflare Access (see lib/cfAccess.ts) for people outside the tailnet.
+ * Requests for PUBLIC_HOST, or carrying a Cf-Access-Jwt-Assertion, are identified ONLY by that verified
+ * token – Tailscale/SSO headers on that route are ignored, since anyone on the internet could send them.
+ *
  * SECURITY: in tailscale/header mode the app trusts these headers, so it must only be reachable through
- * that proxy (never publish its port on the LAN or internet). The docker-compose setup ensures this.
+ * that proxy or the Cloudflare tunnel (never publish its port on the LAN or internet). docker-compose ensures this.
  */
 export type AuthMode = "tailscale" | "header" | "dev";
 
@@ -50,9 +55,23 @@ export function decodeHeaderValue(value: string | null): string | null {
   });
 }
 
-async function readIdentity(): Promise<Identity | null> {
-  const h = await headers();
-  const mode = authMode();
+type HeaderGetter = { get(name: string): string | null };
+
+/** Works out who is calling from the request headers (and the dev cookie). Exported for tests. */
+export async function identityFromRequest(h: HeaderGetter, devCookie: string | null, mode: AuthMode = authMode()): Promise<Identity | null> {
+  if (mode !== "dev") {
+    const cf = accessConfig();
+    if (cf) {
+      const token = h.get("cf-access-jwt-assertion");
+      const host = (h.get("host") ?? "").split(":")[0].toLowerCase();
+      if (token || host === cf.publicHost) {
+        const claims = await verifyAccessJwt(token, cf);
+        if (!claims) return null;
+        const email = claims.email.trim().toLowerCase();
+        return { email: identityAliases().get(email) ?? email, name: null, avatarUrl: null };
+      }
+    }
+  }
   if (mode === "tailscale") {
     const login = h.get("tailscale-user-login");
     if (!login) return null;
@@ -63,8 +82,12 @@ async function readIdentity(): Promise<Identity | null> {
     if (!email) return null;
     return { email, name: decodeHeaderValue(h.get(process.env.AUTH_NAME_HEADER ?? "x-authentik-name")), avatarUrl: null };
   }
-  const devEmail = (await cookies()).get("dev_user")?.value ?? process.env.DEV_USER_EMAIL ?? DEV_USERS[0];
+  const devEmail = devCookie ?? process.env.DEV_USER_EMAIL ?? DEV_USERS[0];
   return { email: devEmail, name: devEmail.split("@")[0], avatarUrl: null };
+}
+
+async function readIdentity(): Promise<Identity | null> {
+  return identityFromRequest(await headers(), (await cookies()).get("dev_user")?.value ?? null);
 }
 
 export type User = typeof schema.users.$inferSelect;

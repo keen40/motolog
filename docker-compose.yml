@@ -20,6 +20,25 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-6-luna}
       - AI_MONTHLY_LOOKUPS=${AI_MONTHLY_LOOKUPS:-20}
       - AI_MAX_SEARCHES=${AI_MAX_SEARCHES:-12}
+      # Public access through Cloudflare Tunnel + Access (optional, see README "Access without the tailnet")
+      - CF_ACCESS_TEAM_DOMAIN=${CF_ACCESS_TEAM_DOMAIN:-}
+      - CF_ACCESS_AUD=${CF_ACCESS_AUD:-}
+      - PUBLIC_HOST=${PUBLIC_HOST:-}
+      - IDENTITY_ALIASES=${IDENTITY_ALIASES:-}
     volumes:
       - ./data:/data
     restart: unless-stopped
+
+  # Cloudflare Tunnel: an outbound connection to Cloudflare, so nothing is opened on this server.
+  # Only started with COMPOSE_PROFILES=public in .env. Cloudflare Access in front of it does the login;
+  # the app verifies the Access token itself. In the tunnel's public hostname, point it at http://app:3000.
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.2
+    container_name: motolog-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - app
+    restart: unless-stopped
+    profiles: ["public"]

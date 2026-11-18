@@ -7,10 +7,11 @@ const en = {
     title: "Who are you?",
     tailscale: "MotoLog identifies you through Tailscale. Open it via its tailnet address (https://motolog.<your-tailnet>.ts.net) from a device signed in to your tailnet.",
     sso: "MotoLog expects to be opened through the SSO proxy. Sign in there and try again.",
+    public: "Your sign-in couldn't be verified. Reload the page to sign in again with your e-mail code – and if it keeps happening, ask the owner to add your e-mail to the guest list.",
   },
   share: {
     title: "Sharing",
-    hint: "Share this bike with family or friends by their Tailscale login (e-mail). They see it the next time they open MotoLog.",
+    hint: "Share this bike by the e-mail they sign in with (their Cloudflare sign-in e-mail, or their Tailscale login). They see it the next time they open MotoLog.",
     email: "Login e-mail",
     viewer: "Can view",
     editor: "Can edit",

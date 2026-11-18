@@ -57,7 +57,47 @@ ride hours, access rules, the service schedule and tuning comparisons.
 
 The container is published on `127.0.0.1:3010` only, so the only way in is `tailscale serve`, which adds the
 `Tailscale-User-Login` / `-Name` / `-Profile-Pic` headers. **Don't** publish the port on `0.0.0.0` or enable Funnel:
-anyone who can reach the app directly could fake those headers.
+anyone who can reach the app directly could fake those headers. The optional Cloudflare tunnel (below) is the
+one other way in, and there the app accepts only a verified Cloudflare Access token.
+
+### Access without the tailnet (Cloudflare Tunnel + Access)
+
+For family and friends who aren't on the tailnet. `cloudflared` opens an **outbound** tunnel to Cloudflare –
+no ports are opened on the server – and Cloudflare Access asks every visitor for their e-mail and a one-time
+code before anything reaches MotoLog. Only e-mails on your guest list get a code. The app then **verifies
+Access's signed token itself** (signature, audience, team, expiry), and on the public address it ignores any
+Tailscale headers, so it can't be spoofed. The tailnet address keeps working as before.
+
+One-time setup in the Cloudflare dashboard (Zero Trust):
+
+1. **Networks → Tunnels → Create a tunnel → Cloudflared**, name it `motolog`. Copy the token from the shown
+   install command (the long string after `--token`). Don't run their install command – Docker runs it.
+2. In the tunnel, **Public hostname → Add**: subdomain `motolog`, your domain, service type **HTTP**, URL **`app:3000`**.
+3. **Access → Applications → Add → Self-hosted**: application domain `motolog.<your domain>`, session e.g. 1 month.
+   Policy: action **Allow**, include **Emails** → your guest list (yourself too). Login method: **One-time PIN**.
+   Save, then copy the **Application Audience (AUD) Tag**. Your team domain is `<team>.cloudflareaccess.com`
+   (Settings → Custom pages / Team name).
+4. *(For installing it on phones)* add a second self-hosted application on the same domain with paths
+   `manifest.webmanifest`, `pwa-icon/*` and `icon.svg`, policy action **Bypass**, include **Everyone**.
+   Phones fetch these without cookies; they contain no data.
+
+Then on the server, add to `~/motolog/.env` and start it:
+
+```
+COMPOSE_PROFILES=public
+CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+PUBLIC_HOST=motolog.example.com
+CF_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com
+CF_ACCESS_AUD=...
+IDENTITY_ALIASES=you@gmail.com=keen40@github     # your Cloudflare e-mail → your existing account
+```
+
+```bash
+cd ~/motolog && docker compose up -d
+```
+
+**Adding someone:** put their e-mail on the Access policy's guest list, then share a bike with that same
+e-mail in MotoLog (or let them add their own bikes). **Removing someone:** take them off the guest list.
 
 ### Switching to Authentik later
 
