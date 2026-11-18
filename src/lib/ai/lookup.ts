@@ -272,7 +272,13 @@ function prompt(i: LookupInput) {
     .join("\n");
   const instructions = `You compile reference data for a motorcycle maintenance app. Use web search. Accuracy matters more than completeness, but once you have a good source, extract everything it covers.
 
-Sources, in order of preference: the manufacturer's owner's/service manual for this model year (often a PDF, or on manualslib.com), OEM parts fiches (cmsnl.com, partzilla.com, boats.net, revzilla.com/oem, the manufacturer's parts site), the manufacturer's own pages, then reputable retailers' fitment lists. Forums only if nothing else exists (say so in warnings).
+Good sources (all count as readable when the page itself shows the value), roughly in this order:
+1. The owner's / service manual for this model year: free PDFs and manual viewers such as manualslib.com.
+2. The manufacturer's own spec sheets and model-year press releases (e.g. global.honda, yamaha-motor, ktm.com newsrooms) – excellent for dimensions, engine data, carb, tyres, suspension travel, weight.
+3. OEM parts diagrams for this exact model (cmsnl.com, partzilla.com, boats.net, revzilla.com/oem, bike-parts-*.com, oem-bike-parts.com): part numbers, jet sizes, plug type, sprocket teeth, chain links.
+4. Reputable retailers' fitment lists for aftermarket parts.
+Forums only if nothing else exists (say so in warnings).
+Search for at least the manual, a manufacturer spec sheet and a parts diagram before concluding that a value can't be found. A part number must come from the diagram row for that exact part.
 
 Rules:
 - Only state a value if a source gives it for THIS model year (or a year range that includes it). Never guess. Plain values, metric units, under 160 characters.
@@ -430,7 +436,15 @@ const aiSource = (u: string | null) => (httpUrl(u) ? `AI · ${u}` : "AI · no so
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
-/** Writes an AI result into the catalogue as unverified data. Rows riders corrected are kept. */
+const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_").slice(0, 40);
+const urlIn = (text: string | null) => text?.match(/https?:\/\/\S+/)?.[0] ?? null;
+
+/**
+ * Merges an AI result into the catalogue as unverified data. Lookups vary from run to run, so a
+ * re-run never throws away earlier well-sourced values: new values replace old AI values with the
+ * same key, old AI values the new run didn't return are kept (unless their source is a blocked
+ * manual shop), and anything a rider entered or corrected is never touched.
+ */
 function applyResult(tx: Tx, modelId: string, raw: LookupResult, input: LookupInput) {
   const ok = <T extends { source_url: string | null }>(x: T) => !blockedSource(x.source_url);
   const r: LookupResult = {
@@ -442,78 +456,87 @@ function applyResult(tx: Tx, modelId: string, raw: LookupResult, input: LookupIn
     manual_url: blockedSource(raw.manual_url) ? null : raw.manual_url,
   };
   const zone = (z: string) => (ZONES.includes(z as never) ? z : "other");
+  const model = tx.select().from(s.vehicleModels).where(eq(s.vehicleModels.id, modelId)).get();
+  const stockValues = {
+    ...(model?.stockSetup?.values ?? {}),
+    ...Object.fromEntries(r.stock_setup.map((x) => [x.key, x.value.slice(0, 80)])),
+  };
   tx.update(s.vehicleModels)
     .set({
-      summaryEn: r.summary_en || null,
-      summaryHu: r.summary_hu || null,
-      partsCatalogUrl: httpUrl(r.parts_catalog_url),
-      ownersManualUrl: httpUrl(r.manual_url),
+      summaryEn: r.summary_en || model?.summaryEn || null,
+      summaryHu: r.summary_hu || model?.summaryHu || null,
+      partsCatalogUrl: httpUrl(r.parts_catalog_url) ?? model?.partsCatalogUrl ?? null,
+      ownersManualUrl: httpUrl(r.manual_url) ?? (blockedSource(model?.ownersManualUrl ?? null) ? null : (model?.ownersManualUrl ?? null)),
       // Make, model, year and displacement come from the rider's form and are kept as entered.
       category: input.category ?? r.identified.category,
       stroke: input.stroke ?? r.identified.stroke ?? undefined,
       dataOrigin: "ai",
-      stockSetup: r.stock_setup.length
-        ? { source: "AI draft – unverified", values: Object.fromEntries(r.stock_setup.map((x) => [x.key, x.value.slice(0, 80)])) }
-        : null,
+      stockSetup: Object.keys(stockValues).length ? { source: "AI draft – unverified", values: stockValues } : null,
     })
     .where(eq(s.vehicleModels.id, modelId))
     .run();
 
-  // Replace earlier AI rows; keep anything a rider entered or corrected.
-  tx.delete(s.modelSpecs).where(and(eq(s.modelSpecs.modelId, modelId), eq(s.modelSpecs.isSeed, true))).run();
+  // Specs: drop old AI rows from blocked sources, then upsert the new values by key.
+  const existing = tx.select().from(s.modelSpecs).where(eq(s.modelSpecs.modelId, modelId)).all();
+  for (const old of existing) {
+    if (old.isSeed && blockedSource(urlIn(old.source))) tx.delete(s.modelSpecs).where(eq(s.modelSpecs.id, old.id)).run();
+  }
   const seen = new Set<string>();
   for (const x of r.specs) {
-    const key = x.key.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40);
+    const key = slug(x.key);
     if (!key || seen.has(key) || !x.value) continue;
     seen.add(key);
-    const exists = tx.select({ id: s.modelSpecs.id }).from(s.modelSpecs).where(and(eq(s.modelSpecs.modelId, modelId), eq(s.modelSpecs.seedKey, key))).get();
-    if (exists) continue; // a rider's own row with this key wins
-    tx.insert(s.modelSpecs)
-      .values({ modelId, seedKey: key, specGroup: x.group, zone: zone(x.zone), labelEn: x.label_en, labelHu: x.label_hu, value: x.value.slice(0, 300), source: aiSource(x.source_url), isSeed: true })
-      .run();
+    const old = existing.find((e) => e.seedKey === key);
+    if (old && !old.isSeed) continue; // a rider's own row with this key wins
+    const row = { modelId, seedKey: key, specGroup: x.group, zone: zone(x.zone), labelEn: x.label_en, labelHu: x.label_hu, value: x.value.slice(0, 300), source: aiSource(x.source_url), isSeed: true };
+    if (old) {
+      tx.update(s.modelSpecs).set(row).where(eq(s.modelSpecs.id, old.id)).run();
+      if (old.value !== row.value) tx.delete(s.specVerifications).where(eq(s.specVerifications.specId, old.id)).run();
+    } else {
+      tx.insert(s.modelSpecs).values(row).run();
+    }
   }
 
-  tx.delete(s.serviceIntervals).where(eq(s.serviceIntervals.modelId, modelId)).run();
-  const tasks = new Set<string>();
+  // Intervals: upsert by task key, keep tasks the new run didn't return.
   for (const x of dedupeIntervals(r.intervals)) {
-    const key = x.task_key.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40);
+    const key = slug(x.task_key);
     const hours = intervalHours(x);
-    if (!key || tasks.has(key) || (hours == null && x.months == null)) continue;
-    tasks.add(key);
+    if (!key || (hours == null && x.months == null)) continue;
     const src = host(httpUrl(x.source_url));
-    tx.insert(s.serviceIntervals)
-      .values({
-        modelId,
-        taskKey: key,
-        zone: zone(x.zone),
-        labelEn: x.label_en,
-        labelHu: x.label_hu,
-        intervalHours: hours,
-        intervalMonths: x.months,
-        notesEn: [x.notes_en, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
-        notesHu: [x.notes_hu, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
-      })
-      .run();
+    const row = {
+      modelId,
+      taskKey: key,
+      zone: zone(x.zone),
+      labelEn: x.label_en,
+      labelHu: x.label_hu,
+      intervalHours: hours,
+      intervalMonths: x.months,
+      notesEn: [x.notes_en, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
+      notesHu: [x.notes_hu, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
+    };
+    tx.insert(s.serviceIntervals).values(row).onConflictDoUpdate({ target: [s.serviceIntervals.modelId, s.serviceIntervals.taskKey], set: row }).run();
   }
 
-  tx.delete(s.fitmentParts).where(and(eq(s.fitmentParts.modelId, modelId), eq(s.fitmentParts.isSeed, true))).run();
-  r.parts.slice(0, 20).forEach((x, i) => {
-    tx.insert(s.fitmentParts)
-      .values({
-        modelId,
-        seedKey: `ai_${i}`,
-        zone: zone(x.zone),
-        category: x.category,
-        brand: x.brand,
-        name: x.name,
-        partNumber: x.part_number,
-        isOem: x.is_oem,
-        searchQuery: x.search_query || `${x.brand} ${x.name}`,
-        infoUrl: httpUrl(x.source_url),
-        notesEn: x.notes_en,
-        notesHu: x.notes_hu,
-        isSeed: true,
-      })
-      .run();
-  });
+  // Parts: keyed by category + brand + name; drop old AI parts from blocked sources.
+  for (const old of tx.select().from(s.fitmentParts).where(and(eq(s.fitmentParts.modelId, modelId), eq(s.fitmentParts.isSeed, true))).all()) {
+    if (blockedSource(old.infoUrl)) tx.delete(s.fitmentParts).where(eq(s.fitmentParts.id, old.id)).run();
+  }
+  for (const x of r.parts.slice(0, 20)) {
+    const row = {
+      modelId,
+      seedKey: `ai_${slug(`${x.category}_${x.brand}_${x.name}`)}`,
+      zone: zone(x.zone),
+      category: x.category,
+      brand: x.brand,
+      name: x.name,
+      partNumber: x.part_number,
+      isOem: x.is_oem,
+      searchQuery: x.search_query || `${x.brand} ${x.name}`,
+      infoUrl: httpUrl(x.source_url),
+      notesEn: x.notes_en,
+      notesHu: x.notes_hu,
+      isSeed: true,
+    };
+    tx.insert(s.fitmentParts).values(row).onConflictDoUpdate({ target: [s.fitmentParts.modelId, s.fitmentParts.seedKey], set: row }).run();
+  }
 }
