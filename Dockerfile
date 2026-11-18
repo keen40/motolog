@@ -24,7 +24,6 @@ ENV NODE_ENV=production \
 
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 # Native SQLite driver with its prebuilt binaries (loaded dynamically, so copy the whole package).
 COPY --from=build /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
