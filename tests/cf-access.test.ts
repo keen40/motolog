@@ -109,6 +109,13 @@ describe("who is calling (tailnet + Cloudflare at the same time)", () => {
     expect(id).toMatchObject({ email: "keen40@github", name: "Kovács" });
   });
 
+  it("refuses the public address while Access is only half configured", async () => {
+    delete process.env.CF_ACCESS_AUD;
+    expect(await identityFromRequest(headers({ host: HOST, "tailscale-user-login": "keen40@github" }), null, "tailscale")).toBeNull();
+    expect((await identityFromRequest(headers({ host: "home-server.tail2736d3.ts.net:8451", "tailscale-user-login": "keen40@github" }), null, "tailscale"))?.email).toBe("keen40@github");
+    process.env.CF_ACCESS_AUD = AUD;
+  });
+
   it("without Cloudflare configured, a Cloudflare header changes nothing", async () => {
     delete process.env.PUBLIC_HOST;
     const h = headers({ host: HOST, "tailscale-user-login": "keen40@github", "cf-access-jwt-assertion": "anything" });

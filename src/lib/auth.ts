@@ -61,9 +61,12 @@ type HeaderGetter = { get(name: string): string | null };
 export async function identityFromRequest(h: HeaderGetter, devCookie: string | null, mode: AuthMode = authMode()): Promise<Identity | null> {
   if (mode !== "dev") {
     const cf = accessConfig();
+    const host = (h.get("host") ?? "").split(":")[0].toLowerCase();
+    const publicHost = process.env.PUBLIC_HOST?.trim().toLowerCase();
+    // Fail closed: the public address is set but Access isn't fully configured yet → nobody gets in that way.
+    if (!cf && publicHost && host === publicHost) return null;
     if (cf) {
       const token = h.get("cf-access-jwt-assertion");
-      const host = (h.get("host") ?? "").split(":")[0].toLowerCase();
       if (token || host === cf.publicHost) {
         const claims = await verifyAccessJwt(token, cf);
         if (!claims) return null;
