@@ -29,6 +29,13 @@
       "when": 1795009797513,
       "tag": "0003_ai_lookups",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795018864633,
+      "tag": "0004_rides",
+      "breakpoints": true
     }
   ]
 }

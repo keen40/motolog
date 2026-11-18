@@ -135,3 +135,17 @@ export type Shop = {
   searchUrlTemplate: string;
   sortOrder: number;
 };
+
+export type Ride = {
+  id: string;
+  vehicleId: string;
+  rideDate: string;
+  durationH: number;
+  track: string | null;
+  surface: string | null;
+  tuningSheetId: string | null;
+  tuningSheetTitle: string | null;
+  fuelL: number | null;
+  notes: string | null;
+  authorName: string | null;
+};

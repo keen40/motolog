@@ -3,7 +3,7 @@ import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import type { Role } from "./access";
 import type { User } from "./auth";
-import type { FitmentPart, ModelSpec, ServiceInterval, Shop, TuningSheet, VehicleEvent, VehicleModel } from "./types";
+import type { FitmentPart, ModelSpec, Ride, ServiceInterval, Shop, TuningSheet, VehicleEvent, VehicleModel } from "./types";
 
 export type GarageVehicle = typeof s.vehicles.$inferSelect & {
   role: Role;
@@ -145,4 +145,17 @@ export function loadTuningSheets(vehicleId: string): TuningSheet[] {
     .orderBy(desc(sql`coalesce(${s.tuningSheets.sheetDate}, '')`), desc(s.tuningSheets.createdAt))
     .all()
     .map(({ t, authorName, authorEmail }) => ({ ...t, settings: t.settings ?? {}, authorName: authorName ?? authorEmail ?? null }));
+}
+
+/** Rides, newest first. */
+export function loadRides(vehicleId: string): Ride[] {
+  return getDb()
+    .select({ r: s.rides, authorName: s.users.name, authorEmail: s.users.email, sheetTitle: s.tuningSheets.title })
+    .from(s.rides)
+    .leftJoin(s.users, eq(s.users.id, s.rides.authorId))
+    .leftJoin(s.tuningSheets, eq(s.tuningSheets.id, s.rides.tuningSheetId))
+    .where(eq(s.rides.vehicleId, vehicleId))
+    .orderBy(desc(s.rides.rideDate), desc(s.rides.createdAt))
+    .all()
+    .map(({ r, authorName, authorEmail, sheetTitle }) => ({ ...r, tuningSheetTitle: sheetTitle ?? null, authorName: authorName ?? authorEmail ?? null }));
 }

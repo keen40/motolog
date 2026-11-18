@@ -362,3 +362,61 @@ export async function deleteTuningSheet(vehicleId: string, sheetId: string) {
   revalidatePath(`/garage/${vehicleId}`);
   redirect(`/garage/${vehicleId}?tab=tuning`);
 }
+
+// ---------------------------------------------------------------------------
+// Rides – each ride's duration is added to the bike's engine hours
+// ---------------------------------------------------------------------------
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function bumpHours(vehicleId: string, delta: number) {
+  if (!delta) return;
+  const db = getDb();
+  const v = db.select({ h: s.vehicles.engineHours }).from(s.vehicles).where(eq(s.vehicles.id, vehicleId)).get();
+  db.update(s.vehicles)
+    .set({ engineHours: Math.max(0, round1((v?.h ?? 0) + delta)) })
+    .where(eq(s.vehicles.id, vehicleId))
+    .run();
+}
+
+export async function saveRide(vehicleId: string, rideId: string | null, formData: FormData) {
+  const { user } = await requireVehicle(vehicleId, "editor");
+  const db = getDb();
+  const duration = num(formData, "duration_h");
+  if (duration == null || duration <= 0 || duration > 24) throw new Error("Ride duration must be between 0 and 24 hours");
+  const sheetId = str(formData, "tuning_sheet_id");
+  const sheetOk = sheetId
+    ? !!db.select({ id: s.tuningSheets.id }).from(s.tuningSheets).where(and(eq(s.tuningSheets.id, sheetId), eq(s.tuningSheets.vehicleId, vehicleId))).get()
+    : false;
+  const row = {
+    rideDate: str(formData, "ride_date") ?? new Date().toISOString().slice(0, 10),
+    durationH: round1(duration),
+    track: str(formData, "track"),
+    surface: str(formData, "surface"),
+    tuningSheetId: sheetOk ? sheetId : null,
+    fuelL: num(formData, "fuel_l"),
+    notes: str(formData, "notes"),
+  };
+  if (rideId) {
+    const old = db.select().from(s.rides).where(and(eq(s.rides.id, rideId), eq(s.rides.vehicleId, vehicleId))).get();
+    if (!old) return;
+    db.update(s.rides).set(row).where(eq(s.rides.id, rideId)).run();
+    bumpHours(vehicleId, row.durationH - old.durationH);
+  } else {
+    db.insert(s.rides).values({ ...row, vehicleId, authorId: user.id }).run();
+    bumpHours(vehicleId, row.durationH);
+  }
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}?tab=rides`);
+}
+
+export async function deleteRide(vehicleId: string, rideId: string) {
+  await requireVehicle(vehicleId, "editor");
+  const db = getDb();
+  const old = db.select().from(s.rides).where(and(eq(s.rides.id, rideId), eq(s.rides.vehicleId, vehicleId))).get();
+  if (!old) return;
+  db.delete(s.rides).where(eq(s.rides.id, rideId)).run();
+  bumpHours(vehicleId, -old.durationH);
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}?tab=rides`);
+}

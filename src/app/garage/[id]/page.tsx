@@ -6,19 +6,22 @@ import { SharePanel } from "@/components/SharePanel";
 import { SpecsPanel } from "@/components/SpecsPanel";
 import { StatsCharts } from "@/components/StatsCharts";
 import { Timeline } from "@/components/Timeline";
+import { PremixCalculator } from "@/components/PremixCalculator";
+import { RidesPanel } from "@/components/RidesPanel";
 import { TuningPanel } from "@/components/TuningPanel";
 import { deleteVehicle, updateVehicleHours } from "@/app/garage/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { canEdit, requireVehicle } from "@/lib/access";
-import { listKnownUsers, loadEvents, loadIntervals, loadModel, loadParts, loadShares, loadShops, loadSpecs, loadTuningSheets } from "@/lib/data";
+import { listKnownUsers, loadEvents, loadIntervals, loadModel, loadParts, loadShares, loadShops, loadRides, loadSpecs, loadTuningSheets } from "@/lib/data";
 import { getI18n } from "@/lib/i18n";
 import { photoUrl } from "@/lib/photos";
+import { parseRatio } from "@/lib/premix";
 import { buildSchedule, zoneStates } from "@/lib/schedule";
 import type { ZoneId } from "@/lib/types";
 import { formatMoney, ZONES } from "@/lib/zones";
 
-const TABS = ["overview", "timeline", "plans", "tuning", "stats", "specs"] as const;
+const TABS = ["overview", "timeline", "rides", "plans", "tuning", "stats", "specs"] as const;
 type Tab = (typeof TABS)[number];
 
 export default async function BikePage({ params, searchParams }: PageProps<"/garage/[id]">) {
@@ -37,6 +40,15 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
   );
   const schedule = buildSchedule(intervals, events, vehicle.engineHours);
   const { states, counts } = zoneStates(events);
+
+  // Premix ratio for 2-strokes: latest tuning sheet, else the model's stock setup.
+  const sheets = loadTuningSheets(id);
+  const sheetRatio = parseRatio(sheets[0]?.settings.premix);
+  const stockRatio = parseRatio(model?.stockSetup?.values.premix);
+  const premix =
+    model?.stroke === 2 || sheetRatio || stockRatio
+      ? { ratio: sheetRatio ?? stockRatio, source: sheetRatio ? ("sheet" as const) : stockRatio ? ("stock" as const) : null }
+      : null;
 
   const done = events.filter((e) => e.kind !== "plan");
   const spent = new Map<string, number>();
@@ -71,11 +83,16 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
             </div>
             <div className="flex shrink-0 gap-2">
               <Link href={`/garage/${id}/history`} className="btn-ghost" aria-label={t.history.button} title={t.history.button}>
-                📄 <span className="hidden lg:inline">{t.history.short}</span>
+                📄 <span className="hidden xl:inline">{t.history.short}</span>
               </Link>
               {editable && (
                 <Link href={`/garage/${id}/edit`} className="btn-ghost" aria-label={t.bike.edit}>
-                  ✎ <span className="hidden sm:inline">{t.bike.edit}</span>
+                  ✎ <span className="hidden xl:inline">{t.bike.edit}</span>
+                </Link>
+              )}
+              {editable && (
+                <Link href={`/garage/${id}/ride`} className="btn-ghost" aria-label={t.rides.add} title={t.rides.add}>
+                  🏁 <span className="hidden xl:inline">{t.rides.quick}</span>
                 </Link>
               )}
               {editable && (
@@ -134,14 +151,22 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
       </nav>
 
       {tab === "overview" && (
-        <OverviewPanel vehicleId={id} events={events} states={states} counts={counts} schedule={schedule.slice(0, 4)} currentHours={vehicle.engineHours} editable={editable} />
+        <>
+          <OverviewPanel vehicleId={id} events={events} states={states} counts={counts} schedule={schedule.slice(0, 4)} currentHours={vehicle.engineHours} editable={editable} />
+          {premix && (
+            <div className="max-w-md">
+              <PremixCalculator ratio={premix.ratio} source={premix.source} />
+            </div>
+          )}
+        </>
       )}
+      {tab === "rides" && <RidesPanel vehicleId={id} rides={loadRides(id)} editable={editable} premix={premix} />}
       {tab === "timeline" && <Timeline vehicleId={id} events={done} photos={photos} kind={typeof sp.kind === "string" ? sp.kind : null} editable={editable} />}
       {tab === "plans" && <PlanBoard vehicleId={id} events={events.filter((e) => e.kind === "plan" || e.planStatus === "done")} editable={editable} />}
       {tab === "tuning" && (
         <TuningPanel
           vehicleId={id}
-          sheets={loadTuningSheets(id)}
+          sheets={sheets}
           stock={model?.stockSetup ?? null}
           editable={editable}
           compare={typeof sp.a === "string" && typeof sp.b === "string" ? { a: sp.a, b: sp.b } : null}
@@ -162,8 +187,8 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
 
       {editable && (
         <Link
-          href={tab === "tuning" ? `/garage/${id}/tuning/new` : `/garage/${id}/log`}
-          aria-label={tab === "tuning" ? t.tuning.newSheet : t.bike.logEntry}
+          href={tab === "tuning" ? `/garage/${id}/tuning/new` : tab === "rides" ? `/garage/${id}/ride` : `/garage/${id}/log`}
+          aria-label={tab === "tuning" ? t.tuning.newSheet : tab === "rides" ? t.rides.add : t.bike.logEntry}
           className="fixed right-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-3xl font-light text-black shadow-lg shadow-black/50 sm:hidden"
         >
           +

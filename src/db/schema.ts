@@ -275,3 +275,26 @@ export const aiLookups = sqliteTable(
   },
   (t) => [index("ai_lookups_created").on(t.createdAt)],
 );
+
+// ---------------------------------------------------------------------------
+// Ride log: each ride adds its duration to the bike's engine hours, so the
+// service schedule stays right on bikes without an hour meter.
+// ---------------------------------------------------------------------------
+
+export const rides = sqliteTable(
+  "rides",
+  {
+    id: id(),
+    vehicleId: text("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+    authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+    rideDate: text("ride_date").notNull(),
+    durationH: real("duration_h").notNull(),
+    track: text("track"),
+    surface: text("surface"),
+    tuningSheetId: text("tuning_sheet_id").references(() => tuningSheets.id, { onDelete: "set null" }),
+    fuelL: real("fuel_l"),
+    notes: text("notes"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("rides_vehicle").on(t.vehicleId, t.rideDate)],
+);
