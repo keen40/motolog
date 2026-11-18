@@ -39,6 +39,27 @@ export type VehicleModel = {
   summaryHu: string | null;
   partsCatalogUrl: string | null;
   ownersManualUrl: string | null;
+  stockSetup: StockSetup | null;
+};
+
+export type StockSetup = { source: string; values: Record<string, string> };
+
+export type TuningSheet = {
+  id: string;
+  vehicleId: string;
+  title: string;
+  sheetDate: string | null;
+  engineHours: number | null;
+  track: string | null;
+  surface: string | null;
+  weather: string | null;
+  tempC: number | null;
+  altitudeM: number | null;
+  settings: Record<string, string>;
+  rating: number | null;
+  notes: string | null;
+  authorName: string | null;
+  createdAt: string;
 };
 
 export type VehicleEvent = {

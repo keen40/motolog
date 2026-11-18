@@ -43,6 +43,8 @@ export const vehicleModels = sqliteTable(
     summaryHu: text("summary_hu"),
     partsCatalogUrl: text("parts_catalog_url"),
     ownersManualUrl: text("owners_manual_url"),
+    /** Factory suspension/carb setup: { source, values: { main_jet: "450", ... } } – see lib/tuning.ts. */
+    stockSetup: text("stock_setup", { mode: "json" }).$type<{ source: string; values: Record<string, string> }>(),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("vehicle_models_unique").on(t.make, t.model, t.yearFrom, t.yearTo)],
@@ -202,4 +204,32 @@ export const photos = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("photos_vehicle").on(t.vehicleId), index("photos_event").on(t.eventId)],
+);
+
+// ---------------------------------------------------------------------------
+// Tuning sheets: a snapshot of carb / suspension / chassis settings plus the
+// conditions they were used in. Setting keys are defined in lib/tuning.ts.
+// ---------------------------------------------------------------------------
+
+export const tuningSheets = sqliteTable(
+  "tuning_sheets",
+  {
+    id: id(),
+    vehicleId: text("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+    authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    sheetDate: text("sheet_date"),
+    engineHours: real("engine_hours"),
+    track: text("track"),
+    surface: text("surface"),
+    weather: text("weather"),
+    tempC: real("temp_c"),
+    altitudeM: real("altitude_m"),
+    settings: text("settings", { mode: "json" }).$type<Record<string, string>>().notNull().default({}),
+    rating: integer("rating"),
+    notes: text("notes"),
+    createdAt: createdAt(),
+    updatedAt: text("updated_at"),
+  },
+  (t) => [index("tuning_sheets_vehicle").on(t.vehicleId, t.sheetDate)],
 );

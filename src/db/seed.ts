@@ -8,7 +8,7 @@ import * as s from "./schema";
  * fitment listings from several retailers. Bump SEED_VERSION when you change this file: rows are
  * upserted by stable keys, values riders corrected are left alone, and rows removed here are deleted.
  */
-export const SEED_VERSION = "3";
+export const SEED_VERSION = "4";
 
 const SHOPS = [
   { name: "gmoto.hu", country: "HU", shipsTo: ["HU"], language: "hu", homepage: "https://gmoto.hu", searchUrlTemplate: "https://gmoto.hu/search?query={q}", sortOrder: 10 },
@@ -62,6 +62,36 @@ const YZ125_2001 = {
     summaryHu: "125 köbcentis, folyadékhűtéses kétütemű motocross motor (európai típuskód: 5MV2) YPVS kipufogó-vezérléssel, Mikuni TMX 38 karburátorral, 6 sebességes váltóval és 46 mm-es villával.",
     partsCatalogUrl: "https://www.cmsnl.com/yamaha-yz125_model16889/",
     ownersManualUrl: "https://www.manualslib.com/manual/945223/Yamaha-Yz125n1.html?page=34",
+    // European (5MV2) factory settings. US bikes differ: main #460, pilot #25, air screw 1¼, fork 14/12,
+    // shock rebound 12, low-speed comp 9, high-speed comp 1¼, spring 248 mm / 46 N/mm.
+    stockSetup: {
+      source: "Service manual p. 2-4, 2-7, 3-27…3-33 (Europe)",
+      values: {
+        main_jet: "450",
+        pilot_jet: "30",
+        needle: "6BHY1-75",
+        clip: "3",
+        air_screw: "1.5",
+        slide: "5.75",
+        premix: "30:1",
+        oil: "Yamalube 2-R",
+        fuel: "RON 95+",
+        plug: "NGK BR9EG",
+        fork_comp: "12",
+        fork_reb: "10",
+        fork_oil_level: "135",
+        fork_spring: "4.10",
+        shock_lsc: "12",
+        shock_hsc: "1",
+        shock_reb: "10",
+        shock_preload: "262",
+        shock_spring: "48.0",
+        tyre_f: "1.0",
+        tyre_r: "1.0",
+        sprocket_f: "13",
+        sprocket_r: "48",
+      },
+    },
   },
   specs: [
     ["engine_type", "engine", "engine", "Engine type", "Motor típusa", "Liquid-cooled 2-stroke single, forward inclined, reed valve, YPVS power valve", M("2-1")],

@@ -3,7 +3,7 @@ import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema as s } from "@/db";
 import type { Role } from "./access";
 import type { User } from "./auth";
-import type { FitmentPart, ModelSpec, ServiceInterval, Shop, VehicleEvent, VehicleModel } from "./types";
+import type { FitmentPart, ModelSpec, ServiceInterval, Shop, TuningSheet, VehicleEvent, VehicleModel } from "./types";
 
 export type GarageVehicle = typeof s.vehicles.$inferSelect & {
   role: Role;
@@ -133,4 +133,16 @@ export function loadShares(vehicleId: string) {
 /** Everyone who has opened the app – used as suggestions when sharing. */
 export function listKnownUsers() {
   return getDb().select({ email: s.users.email, name: s.users.name }).from(s.users).orderBy(asc(s.users.email)).all();
+}
+
+/** Tuning sheets, newest first. */
+export function loadTuningSheets(vehicleId: string): TuningSheet[] {
+  return getDb()
+    .select({ t: s.tuningSheets, authorName: s.users.name, authorEmail: s.users.email })
+    .from(s.tuningSheets)
+    .leftJoin(s.users, eq(s.users.id, s.tuningSheets.authorId))
+    .where(eq(s.tuningSheets.vehicleId, vehicleId))
+    .orderBy(desc(sql`coalesce(${s.tuningSheets.sheetDate}, '')`), desc(s.tuningSheets.createdAt))
+    .all()
+    .map(({ t, authorName, authorEmail }) => ({ ...t, settings: t.settings ?? {}, authorName: authorName ?? authorEmail ?? null }));
 }

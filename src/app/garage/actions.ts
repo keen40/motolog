@@ -7,6 +7,7 @@ import { getDb, schema as s } from "@/db";
 import { requireVehicle } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { deletePhotos, savePhotos } from "@/lib/photos";
+import { TUNING_FIELDS } from "@/lib/tuning";
 import type { EventKind, PartLine, PlanStatus } from "@/lib/types";
 
 const str = (fd: FormData, k: string) => {
@@ -315,4 +316,49 @@ export async function deleteFitmentPart(vehicleId: string, partId: string) {
   await requireUser();
   getDb().delete(s.fitmentParts).where(and(eq(s.fitmentParts.id, partId), eq(s.fitmentParts.isSeed, false))).run();
   revalidatePath(`/garage/${vehicleId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Tuning sheets
+// ---------------------------------------------------------------------------
+
+export async function saveTuningSheet(vehicleId: string, sheetId: string | null, formData: FormData) {
+  const { user } = await requireVehicle(vehicleId, "editor");
+  const db = getDb();
+  const settings: Record<string, string> = {};
+  for (const f of TUNING_FIELDS) {
+    const v = str(formData, `set_${f.key}`);
+    if (v) settings[f.key] = v.slice(0, 80);
+  }
+  const rating = num(formData, "rating");
+  const row = {
+    title: str(formData, "title") ?? new Date().toISOString().slice(0, 10),
+    sheetDate: str(formData, "sheet_date"),
+    engineHours: num(formData, "engine_hours"),
+    track: str(formData, "track"),
+    surface: str(formData, "surface"),
+    weather: str(formData, "weather"),
+    tempC: num(formData, "temp_c"),
+    altitudeM: num(formData, "altitude_m"),
+    settings,
+    rating: rating && rating >= 1 && rating <= 5 ? Math.round(rating) : null,
+    notes: str(formData, "notes"),
+  };
+  if (sheetId) {
+    db.update(s.tuningSheets)
+      .set({ ...row, updatedAt: new Date().toISOString() })
+      .where(and(eq(s.tuningSheets.id, sheetId), eq(s.tuningSheets.vehicleId, vehicleId)))
+      .run();
+  } else {
+    db.insert(s.tuningSheets).values({ ...row, vehicleId, authorId: user.id }).run();
+  }
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}?tab=tuning`);
+}
+
+export async function deleteTuningSheet(vehicleId: string, sheetId: string) {
+  await requireVehicle(vehicleId, "editor");
+  getDb().delete(s.tuningSheets).where(and(eq(s.tuningSheets.id, sheetId), eq(s.tuningSheets.vehicleId, vehicleId))).run();
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}?tab=tuning`);
 }
