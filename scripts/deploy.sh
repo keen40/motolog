@@ -19,6 +19,13 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 1
 fi
 
+if [[ "${SKIP_CHECKS:-}" != 1 ]]; then
+  echo "→ checking (types, lint, tests)"
+  npx tsc --noEmit
+  npm run -s lint
+  npx vitest run --reporter=dot
+fi
+
 echo "→ pushing $BRANCH"
 git push -q origin "$BRANCH"
 

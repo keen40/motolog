@@ -38,8 +38,20 @@ From your dev machine, on `main` with everything committed:
 scripts/deploy.sh
 ```
 
-It pushes to GitHub, then on the server pulls, rebuilds, restarts and checks the app is up.
-(Override with `DEPLOY_HOST`, `DEPLOY_DIR`, `DEPLOY_BRANCH`.)
+It first runs the type check, linter and tests (and stops if any fail), then pushes to GitHub,
+and on the server pulls, rebuilds, restarts and checks the app is up.
+(Override with `DEPLOY_HOST`, `DEPLOY_DIR`, `DEPLOY_BRANCH`; `SKIP_CHECKS=1` only in an emergency.)
+
+### Tests
+
+```bash
+npm test
+```
+
+Vitest, in `tests/`. Each test file gets its own throwaway database (the real `./data` is never touched)
+and OpenAI is replaced by a fake, so tests are free and offline. They cover the parts that could
+silently damage data: re-seeding vs. rider corrections, AI lookup merging and source filtering,
+ride hours, access rules, the service schedule and tuning comparisons.
 
 ### Why it's safe without a login
 
@@ -71,6 +83,17 @@ mkdir -p /tmp/restore && tar -xzf /mnt/data/backups/motolog/motolog-<date>.tar.g
 rm -f data/motolog.db-wal data/motolog.db-shm
 cp /tmp/restore/backup-snapshot.db data/motolog.db && rsync -a --delete /tmp/restore/photos/ data/photos/
 docker compose start
+```
+
+An older backup is fine: the app applies any missing database upgrades when it starts.
+
+**Restore drill** – proves the newest backup really restores, without touching the live app
+(throwaway container on 127.0.0.1:3099, checks integrity, row counts vs. live, photo files, and that the
+garage renders; cleans up after itself):
+
+```bash
+~/motolog/scripts/restore-test.sh                 # newest backup
+~/motolog/scripts/restore-test.sh <archive.tar.gz> # a specific one
 ```
 
 ## Develop locally

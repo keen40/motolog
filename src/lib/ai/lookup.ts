@@ -398,7 +398,8 @@ export function expireStaleLookup(row: { id: string; status: string; createdAt: 
   return false;
 }
 
-async function runLookup(lookupId: string) {
+/** Exported for tests; the app starts it through startLookup(). */
+export async function runLookup(lookupId: string) {
   const db = getDb();
   const row = db.select().from(s.aiLookups).where(eq(s.aiLookups.id, lookupId)).get();
   if (!row) return;
