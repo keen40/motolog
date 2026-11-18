@@ -10,9 +10,11 @@ UI in Hungarian and English.
 
 ## Run on the server (Docker + host Tailscale)
 
+First-time setup on the server:
+
 ```bash
-git clone <this repo> ~/motolog && cd ~/motolog      # or copy the folder over
-mkdir -p data && sudo chown 1000:1000 data          # the app runs as uid 1000
+git clone git@github.com:keen40/motolog.git ~/motolog && cd ~/motolog
+mkdir -p data                                        # owned by your user (uid 1000, same as the container)
 docker compose up -d --build
 sudo tailscale serve --bg --https=8451 http://127.0.0.1:3010
 ```
@@ -21,6 +23,23 @@ Open `https://home-server.<tailnet>.ts.net:8451` from any device on your tailnet
 
 Everyone who can reach it over the tailnet gets their own garage. To share a bike, open it → **Sharing** →
 enter their Tailscale login (e-mail) → *Can view* or *Can edit*.
+
+### Phone
+
+Open the URL in Safari (iPhone) or Chrome (Android) and use **Share → Add to Home Screen** / **Install app**.
+It opens full-screen like an app. Photos are shrunk to ~2048px JPEG in the browser before upload
+(iPhone HEIC photos included).
+
+### Deploying changes
+
+From your dev machine, on `main` with everything committed:
+
+```bash
+scripts/deploy.sh
+```
+
+It pushes to GitHub, then on the server pulls, rebuilds, restarts and checks the app is up.
+(Override with `DEPLOY_HOST`, `DEPLOY_DIR`, `DEPLOY_BRANCH`.)
 
 ### Why it's safe without a login
 
@@ -36,16 +55,23 @@ by e-mail, so keep the same e-mail as the Tailscale login if you want to keep ex
 
 ### Backups
 
-Everything lives in `./data`: `motolog.db` (SQLite) and `photos/`. Stop the stack (or use `sqlite3 motolog.db ".backup x.db"`)
-and copy the folder.
+`scripts/backup.sh` writes a consistent SQLite snapshot plus all photos to
+`/mnt/data/backups/motolog/motolog-<date>.tar.gz` and keeps 14 days (`BACKUP_DIR`, `KEEP_DAYS` to change).
+It runs nightly from cron:
 
-### Updating
-
-```bash
-git pull && docker compose up -d --build
+```cron
+15 3 * * * $HOME/motolog/scripts/backup.sh >> /mnt/data/backups/motolog/backup.log 2>&1
 ```
 
-Database migrations (`drizzle/`) and reference data (`src/db/seed.ts`) are applied automatically on start.
+Restore:
+
+```bash
+cd ~/motolog && docker compose stop
+mkdir -p /tmp/restore && tar -xzf /mnt/data/backups/motolog/motolog-<date>.tar.gz -C /tmp/restore
+rm -f data/motolog.db-wal data/motolog.db-shm
+cp /tmp/restore/backup-snapshot.db data/motolog.db && rsync -a --delete /tmp/restore/photos/ data/photos/
+docker compose start
+```
 
 ## Develop locally
 
@@ -75,6 +101,7 @@ Seed rows are upserted by stable keys, so your data and confirmations survive.
 
 ```
 Dockerfile, docker-compose.yml   deployment
+scripts/            deploy.sh (from your PC), backup.sh (nightly on the server)
 drizzle/            SQL migrations (generated)
 src/db/             schema, connection (auto-migrate + seed), reference data
 src/lib/auth.ts     identity from Tailscale / SSO headers (or dev user)

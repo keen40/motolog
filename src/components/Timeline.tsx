@@ -50,7 +50,7 @@ export async function Timeline({ vehicleId, events, photos, kind, editable }: Pr
                         </div>
                         <h4 className="font-semibold">{e.title}</h4>
                       </div>
-                      <div className="text-right text-sm">
+                      <div className="text-sm sm:text-right">
                         {e.cost ? <p className="font-semibold">{formatMoney(Number(e.cost), e.currency, lang)}</p> : null}
                         <p className="text-xs text-muted">
                           {e.authorName && <span>{fill(t.event.by, { name: e.authorName })} · </span>}

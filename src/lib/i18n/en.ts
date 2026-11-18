@@ -44,6 +44,7 @@ const en = {
     km: "Odometer (km)",
     purchaseDate: "Purchase date",
     notes: "Notes",
+    removePhoto: "Remove photo",
     photo: "Photo",
     save: "Save bike",
   },
@@ -178,7 +179,8 @@ const en = {
     searchPh: "e.g. exhaust, brake pads, grips…",
     go: "Search shops",
   },
-  common: { cancel: "Cancel", save: "Save", back: "Back", optional: "optional", or: "or" },
+  common: {
+    processing: "Preparing photos…", cancel: "Cancel", save: "Save", back: "Back", optional: "optional", or: "or" },
 };
 
 export type Dict = typeof en;

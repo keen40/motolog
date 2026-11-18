@@ -6,6 +6,7 @@ import { saveEvent } from "@/app/garage/actions";
 import { useI18n } from "@/lib/i18n/client";
 import type { EventKind, PartLine, PlanStatus, ServiceInterval, VehicleEvent, ZoneId } from "@/lib/types";
 import { CURRENCIES, KIND_COLORS, ZONES } from "@/lib/zones";
+import { PhotoInput } from "./PhotoInput";
 import { SubmitButton } from "./SubmitButton";
 
 type Props = {
@@ -221,7 +222,7 @@ export function EventForm({ vehicleId, event, defaults, intervals, photos }: Pro
             ))}
           </div>
         )}
-        <input id="photos" name="photos" type="file" accept="image/*" multiple className="input file:mr-3 file:rounded-lg file:border-0 file:bg-border file:px-2 file:py-1 file:text-foreground" />
+        <PhotoInput name="photos" multiple />
       </div>
 
       <div className="flex items-center gap-3">

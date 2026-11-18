@@ -48,69 +48,77 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Bike header */}
-      <div className="card flex flex-col gap-5 overflow-hidden md:flex-row">
+      <div className="card flex flex-col overflow-hidden md:flex-row">
         {vehicle.photoId && photos[vehicle.photoId] && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photos[vehicle.photoId]} alt="" className="h-48 w-full object-cover md:h-auto md:w-72" />
+          <img src={photos[vehicle.photoId]} alt="" className="h-36 w-full object-cover sm:h-48 md:h-auto md:w-72" />
         )}
-        <div className="flex flex-1 flex-col gap-4 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-1 flex-col gap-3 p-4 sm:gap-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted">
                 {vehicle.year} · {vehicle.make}
                 {model?.engineCc && ` · ${model.engineCc} cc ${model.stroke ? `${model.stroke}T` : ""}`}
               </p>
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-2xl font-bold sm:text-3xl">
                 {vehicle.model}
-                {vehicle.nickname && <span className="text-xl font-normal text-muted"> “{vehicle.nickname}”</span>}
+                {vehicle.nickname && <span className="text-lg font-normal text-muted sm:text-xl"> “{vehicle.nickname}”</span>}
               </h1>
-              {model && <p className="mt-1 max-w-xl text-sm text-muted">{lang === "hu" ? model.summaryHu : model.summaryEn}</p>}
+              {model && <p className="mt-1 hidden max-w-xl text-sm text-muted sm:block">{lang === "hu" ? model.summaryHu : model.summaryEn}</p>}
             </div>
             {editable && (
-              <Link href={`/garage/${id}/log`} className="btn-primary">
-                + {t.bike.logEntry}
-              </Link>
+              <div className="flex shrink-0 gap-2">
+                <Link href={`/garage/${id}/edit`} className="btn-ghost" aria-label={t.bike.edit}>
+                  ✎ <span className="hidden sm:inline">{t.bike.edit}</span>
+                </Link>
+                <Link href={`/garage/${id}/log`} className="btn-primary hidden sm:inline-flex">
+                  + {t.bike.logEntry}
+                </Link>
+              </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {kpis.map((k) => (
-              <div key={k.label} className="rounded-xl bg-surface-2 p-3">
-                <p className="text-xs text-muted">{k.label}</p>
-                <p className="text-lg font-semibold">{k.value}</p>
+              <div key={k.label} className="min-w-0 rounded-xl bg-surface-2 p-2 sm:p-3">
+                <p className="truncate text-[10px] text-muted sm:text-xs">{k.label}</p>
+                <p className="truncate text-sm font-semibold sm:text-lg">{k.value}</p>
               </div>
             ))}
           </div>
           {!editable && <p className="text-xs text-muted">🔒 {t.share.readOnly}</p>}
           {editable && (
-          <form action={updateVehicleHours.bind(null, id)} className="flex flex-wrap items-end gap-2">
+          <form action={updateVehicleHours.bind(null, id)} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 sm:flex">
             <div>
               <label className="label" htmlFor="engine_hours">
                 {t.bike.currentHours}
               </label>
-              <input id="engine_hours" name="engine_hours" type="number" step="0.1" min={0} defaultValue={vehicle.engineHours ?? ""} className="input w-32" />
+              <input id="engine_hours" name="engine_hours" type="number" step="0.1" min={0} inputMode="decimal" defaultValue={vehicle.engineHours ?? ""} className="input sm:w-32" />
             </div>
             <div>
               <label className="label" htmlFor="odometer_km">
                 {t.newBike.km}
               </label>
-              <input id="odometer_km" name="odometer_km" type="number" min={0} defaultValue={vehicle.odometerKm ?? ""} className="input w-32" />
+              <input id="odometer_km" name="odometer_km" type="number" min={0} inputMode="numeric" defaultValue={vehicle.odometerKm ?? ""} className="input sm:w-32" />
             </div>
-            <SubmitButton className="btn-ghost">{t.bike.updateHours}</SubmitButton>
+            <SubmitButton className="btn-ghost">
+              <span className="sm:hidden">✓</span>
+              <span className="hidden sm:inline">{t.bike.updateHours}</span>
+            </SubmitButton>
           </form>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <nav className="flex gap-1 overflow-x-auto border-b border-border">
+      <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
         {TABS.map((key) => (
           <Link
             key={key}
             href={`/garage/${id}?tab=${key}`}
             scroll={false}
-            className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium ${
+            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium sm:px-4 ${
               tab === key ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
             }`}
           >
@@ -136,6 +144,16 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
         ) : (
           <p className="card p-6 text-muted">{t.bike.noModel}</p>
         ))}
+
+      {editable && (
+        <Link
+          href={`/garage/${id}/log`}
+          aria-label={t.bike.logEntry}
+          className="fixed right-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-3xl font-light text-black shadow-lg shadow-black/50 sm:hidden"
+        >
+          +
+        </Link>
+      )}
 
       {role === "owner" && (
         <div className="space-y-4 pt-6">

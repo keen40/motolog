@@ -68,6 +68,52 @@ export async function createVehicle(formData: FormData) {
   redirect(`/garage/${vehicle.id}`);
 }
 
+export async function updateVehicle(vehicleId: string, formData: FormData) {
+  const { user, vehicle } = await requireVehicle(vehicleId, "editor");
+  const db = getDb();
+  const modelId = str(formData, "model_id");
+
+  let make = str(formData, "make");
+  let model = str(formData, "model");
+  const year = num(formData, "year");
+  if (modelId) {
+    const m = db.select().from(s.vehicleModels).where(eq(s.vehicleModels.id, modelId)).get();
+    if (m) {
+      make = m.make;
+      model = m.model;
+    }
+  }
+  if (!make || !model || !year) throw new Error("Make, model and year are required");
+
+  let photoId = vehicle.photoId;
+  const [newPhoto] = await savePhotos(files(formData, "photo"), { vehicleId, userId: user.id });
+  if (newPhoto || str(formData, "remove_photo")) {
+    if (vehicle.photoId) await deletePhotos([vehicle.photoId]);
+    photoId = newPhoto ?? null;
+  }
+
+  db.update(s.vehicles)
+    .set({
+      modelId,
+      make,
+      model,
+      year,
+      nickname: str(formData, "nickname"),
+      vin: str(formData, "vin"),
+      engineHours: num(formData, "engine_hours"),
+      odometerKm: num(formData, "odometer_km"),
+      purchaseDate: str(formData, "purchase_date"),
+      notes: str(formData, "notes"),
+      photoId,
+    })
+    .where(eq(s.vehicles.id, vehicleId))
+    .run();
+
+  revalidatePath("/garage");
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}`);
+}
+
 export async function updateVehicleHours(vehicleId: string, formData: FormData) {
   await requireVehicle(vehicleId, "editor");
   getDb()

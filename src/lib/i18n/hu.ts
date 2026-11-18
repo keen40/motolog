@@ -46,6 +46,7 @@ const hu: Dict = {
     km: "Km-óra állás",
     purchaseDate: "Vásárlás dátuma",
     notes: "Megjegyzés",
+    removePhoto: "Fotó eltávolítása",
     photo: "Fotó",
     save: "Motor mentése",
   },
@@ -180,7 +181,8 @@ const hu: Dict = {
     searchPh: "pl. kipufogó, fékbetét, markolat…",
     go: "Keresés a boltokban",
   },
-  common: { cancel: "Mégse", save: "Mentés", back: "Vissza", optional: "nem kötelező", or: "vagy" },
+  common: {
+    processing: "Fotók előkészítése…", cancel: "Mégse", save: "Mentés", back: "Vissza", optional: "nem kötelező", or: "vagy" },
 };
 
 export default hu;

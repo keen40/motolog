@@ -9,7 +9,7 @@ export async function Header() {
   const dev = authMode() === "dev";
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
         <Link href="/garage" className="flex items-center gap-2 font-semibold">
           <Logo />

@@ -47,7 +47,7 @@ body {
   @apply btn border border-red-900/60 text-red-400 hover:bg-red-950/50;
 }
 @utility input {
-  @apply w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm outline-none placeholder:text-muted/60 focus:border-accent;
+  @apply w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-base outline-none sm:text-sm placeholder:text-muted/60 focus:border-accent;
 }
 @utility label {
   @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
