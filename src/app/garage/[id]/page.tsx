@@ -69,16 +69,21 @@ export default async function BikePage({ params, searchParams }: PageProps<"/gar
               </h1>
               {model && <p className="mt-1 hidden max-w-xl text-sm text-muted sm:block">{lang === "hu" ? model.summaryHu : model.summaryEn}</p>}
             </div>
-            {editable && (
-              <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 gap-2">
+              <Link href={`/garage/${id}/history`} className="btn-ghost" aria-label={t.history.button} title={t.history.button}>
+                📄 <span className="hidden lg:inline">{t.history.short}</span>
+              </Link>
+              {editable && (
                 <Link href={`/garage/${id}/edit`} className="btn-ghost" aria-label={t.bike.edit}>
                   ✎ <span className="hidden sm:inline">{t.bike.edit}</span>
                 </Link>
+              )}
+              {editable && (
                 <Link href={`/garage/${id}/log`} className="btn-primary hidden sm:inline-flex">
                   + {t.bike.logEntry}
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {kpis.map((k) => (

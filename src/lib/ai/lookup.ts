@@ -110,9 +110,15 @@ function blockedSource(u: string | null) {
 /** Race-based manual intervals are converted at this many riding hours per race. */
 export const HOURS_PER_RACE = 2;
 
+/** Hours per race: the manual's own figure when it states one (Honda: "about 2.5 hours"), else 2. */
+export function hoursPerRace(r: { hours_per_race?: number | null }) {
+  const h = r.hours_per_race;
+  return h && h >= 0.5 && h <= 8 ? h : HOURS_PER_RACE;
+}
+
 /** Interval in hours: per-race intervals are converted here, so the number can't contradict the notes. */
-export function intervalHours(x: { hours: number | null; every_races?: number | null }) {
-  return x.every_races ? x.every_races * HOURS_PER_RACE : x.hours;
+export function intervalHours(x: { hours: number | null; every_races?: number | null }, perRace = HOURS_PER_RACE) {
+  return x.every_races ? Math.round(x.every_races * perRace * 10) / 10 : x.hours;
 }
 
 const PREFERRED_TASK_KEYS =
@@ -172,6 +178,7 @@ const SCHEMA = obj({
   summary_hu: str,
   parts_catalog_url: strOrNull,
   manual_url: strOrNull,
+  hours_per_race: { type: ["number", "null"] },
   specs: {
     type: "array",
     items: obj({
@@ -235,6 +242,7 @@ export type LookupResult = {
   summary_hu: string;
   parts_catalog_url: string | null;
   manual_url: string | null;
+  hours_per_race?: number | null;
   specs: { key: string; group: string; zone: string; label_en: string; label_hu: string; value: string; source_url: string | null }[];
   intervals: {
     task_key: string;
@@ -291,7 +299,7 @@ specs – read the manual's specification chapter and fill as many of these as i
 ${checklist}
 Other keys are fine for important extra data.
 
-intervals – the manufacturer's maintenance chart. Exactly one entry per task_key, for the main action (replace / change / clean), not for "inspect" – e.g. top_end = piston replacement, silencer = cleaning/repacking. For per-race intervals ("every race", "every third race") set every_races (1, 3, 5…) and hours=null; the app converts races to hours. Use hours only when the manual itself states hours; months for time-based items (e.g. coolant every 2 years = 24). Task keys where they apply: ${PREFERRED_TASK_KEYS}.
+intervals – the manufacturer's maintenance chart. Exactly one entry per task_key, for the main action (replace / change / clean), not for "inspect" – e.g. top_end = piston replacement, silencer = cleaning/repacking. For per-race intervals ("every race", "every third race") set every_races (1, 3, 5…) and hours=null; the app converts races to hours. If the manual says how many operating hours a race corresponds to (e.g. "each race or about 2.5 hours"), put that number in hours_per_race; otherwise null. Use hours only when the manual itself states hours; months for time-based items (e.g. coolant every 2 years = 24). Task keys where they apply: ${PREFERRED_TASK_KEYS}.
 
 parts – up to 15 commonly replaced parts (spark plug, chain, front/rear sprocket, air filter, front/rear brake pads, piston kit, top-end gasket kit, fork seals, oil filter for 4-strokes, clutch plates). Read the OEM part numbers from a parts fiche for this exact model and give them with is_oem=true (brand = the manufacturer). Add well-known aftermarket equivalents only where a retailer's fitment list confirms the model year. part_number null if no source shows it.
 
@@ -414,8 +422,8 @@ async function runLookup(lookupId: string) {
 }
 
 /** One interval per task: if the AI listed a task twice (inspect + replace), keep the longest one. */
-export function dedupeIntervals<T extends { task_key: string; hours: number | null; every_races?: number | null; months: number | null }>(list: T[]) {
-  const size = (x: T) => (intervalHours(x) ?? 0) * 1000 + (x.months ?? 0);
+export function dedupeIntervals<T extends { task_key: string; hours: number | null; every_races?: number | null; months: number | null }>(list: T[], perRace = HOURS_PER_RACE) {
+  const size = (x: T) => (intervalHours(x, perRace) ?? 0) * 1000 + (x.months ?? 0);
   const best = new Map<string, T>();
   for (const x of list) {
     const cur = best.get(x.task_key);
@@ -498,9 +506,12 @@ function applyResult(tx: Tx, modelId: string, raw: LookupResult, input: LookupIn
   }
 
   // Intervals: upsert by task key, keep tasks the new run didn't return.
-  for (const x of dedupeIntervals(r.intervals)) {
+  const perRace = hoursPerRace(r);
+  for (const x of dedupeIntervals(r.intervals, perRace)) {
     const key = slug(x.task_key);
-    const hours = intervalHours(x);
+    const hours = intervalHours(x, perRace);
+    const racesEn = x.every_races ? `${x.every_races} race${x.every_races > 1 ? "s" : ""} × ${perRace} h` : null;
+    const racesHu = x.every_races ? `${x.every_races} verseny × ${perRace} óra` : null;
     if (!key || (hours == null && x.months == null)) continue;
     const src = host(httpUrl(x.source_url));
     const row = {
@@ -511,8 +522,8 @@ function applyResult(tx: Tx, modelId: string, raw: LookupResult, input: LookupIn
       labelHu: x.label_hu,
       intervalHours: hours,
       intervalMonths: x.months,
-      notesEn: [x.notes_en, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
-      notesHu: [x.notes_hu, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
+      notesEn: [x.notes_en, racesEn, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
+      notesHu: [x.notes_hu, racesHu, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
     };
     tx.insert(s.serviceIntervals).values(row).onConflictDoUpdate({ target: [s.serviceIntervals.modelId, s.serviceIntervals.taskKey], set: row }).run();
   }

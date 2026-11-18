@@ -6,7 +6,7 @@ import { getDb, schema as s } from "@/db";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusChip } from "@/components/StatusChip";
 import { SubmitButton } from "@/components/SubmitButton";
-import { dedupeIntervals, expireStaleLookup, intervalHours, type LookupResult } from "@/lib/ai/lookup";
+import { dedupeIntervals, expireStaleLookup, hoursPerRace, intervalHours, type LookupResult } from "@/lib/ai/lookup";
 import { requireUser } from "@/lib/auth";
 import { loadIntervals, loadModel, loadParts, loadSpecs } from "@/lib/data";
 import { fill, getI18n } from "@/lib/i18n";
@@ -69,7 +69,8 @@ export default async function LookupPage({ params }: PageProps<"/catalogue/looku
 
     const every = (h: number | null | undefined, m: number | null | undefined) => [h != null ? `${h} h` : null, m != null ? fill(t.stats.months, { n: m }) : null].filter(Boolean).join(" / ");
     const currentIntervals = compare ? loadIntervals(model.id) : [];
-    const aiIntervals = dedupeIntervals(result.intervals);
+    const perRace = hoursPerRace(result);
+    const aiIntervals = dedupeIntervals(result.intervals, perRace);
     const tasks = [...new Set([...currentIntervals.map((x) => x.taskKey), ...aiIntervals.map((x) => x.task_key)])];
     intervalRows = tasks.map((k) => {
       const c = currentIntervals.find((x) => x.taskKey === k);
@@ -78,7 +79,7 @@ export default async function LookupPage({ params }: PageProps<"/catalogue/looku
         key: k,
         label: (hu ? (c?.labelHu ?? a?.label_hu) : (c?.labelEn ?? a?.label_en)) ?? k,
         current: c ? every(c.intervalHours, c.intervalMonths) : null,
-        ai: a ? `${a.every_races ? `${a.every_races}× 🏁 → ` : ""}${every(intervalHours(a), a.months)}` : null,
+        ai: a ? `${a.every_races ? `${a.every_races}× 🏁 × ${perRace} h → ` : ""}${every(intervalHours(a, perRace), a.months)}` : null,
         source: a?.source_url,
       };
     });

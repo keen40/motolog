@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <I18nProvider value={{ lang, t }}>
           <Header />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-10">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-10 print:max-w-none print:p-0">{children}</main>
         </I18nProvider>
       </body>
     </html>
