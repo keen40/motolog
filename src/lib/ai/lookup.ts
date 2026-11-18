@@ -14,9 +14,86 @@ import { ZONES } from "@/lib/zones";
 
 export const SPEC_GROUPS = ["engine", "fuel", "ignition", "drivetrain", "chassis", "suspension", "brakes", "wheels", "fluids", "dimensions"] as const;
 
-/** Keys the YZ125 seed uses – asking for the same keys makes results comparable. */
-const PREFERRED_SPEC_KEYS =
-  "engine_type, displacement, bore_stroke, compression, piston, ring_gap, gearbox, fuel, premix, tank, carb, jetting_eu, jetting_us, plug, plug_gap, ignition, trans_oil, coolant, air_filter_oil, chain, gearing, chain_slack, tyre_f, tyre_r, tyre_pressure, fork, fork_oil, shock, brakes, brake_pads, brake_fluid, axle_torque, weight, dimensions";
+/** Spec checklist (same keys as the hand-checked YZ125 seed, so results are comparable). */
+const SPEC_CHECKLIST: [key: string, what: string][] = [
+  ["engine_type", "cooling, cylinders, stroke, induction (reed/valves), power valve"],
+  ["displacement", "cm³ as stated by the manufacturer"],
+  ["bore_stroke", "bore × stroke in mm"],
+  ["compression", "compression ratio"],
+  ["cylinder_bore", "standard bore size and wear limit"],
+  ["piston", "piston diameter (and measuring point) and piston-to-cylinder clearance"],
+  ["ring_gap", "piston ring end gap, standard and limit"],
+  ["valve_clearance", "4-strokes: intake/exhaust valve clearance (cold)"],
+  ["clutch_plates", "number and thickness of friction plates with wear limit; clutch spring length"],
+  ["gearbox", "number of gears, clutch type, starter"],
+  ["fuel", "fuel type / octane"],
+  ["premix", "2-strokes: premix ratio and oil type"],
+  ["tank", "fuel tank capacity"],
+  ["carb", "carburettor or injection type and size, ID mark"],
+  ["jetting", "stock jetting for the requested market: main jet, pilot jet, needle + clip, air screw turns, cutaway; mention other markets briefly"],
+  ["plug", "spark plug type"],
+  ["plug_gap", "spark plug gap"],
+  ["ignition", "ignition type and timing"],
+  ["engine_oil", "4-strokes: engine oil grade and capacity (with/without filter)"],
+  ["trans_oil", "2-strokes: transmission oil grade and capacity at change / after overhaul"],
+  ["coolant", "coolant capacity and radiator cap pressure"],
+  ["air_filter_oil", "air filter type and oil"],
+  ["chain", "drive chain size, make/type and number of links"],
+  ["gearing", "stock front/rear sprocket teeth for the requested market"],
+  ["chain_slack", "chain slack"],
+  ["chain_wear", "chain wear limit (length over N links)"],
+  ["tyre_f", "front tyre size (and rim size)"],
+  ["tyre_r", "rear tyre size (and rim size)"],
+  ["tyre_pressure", "tyre pressure"],
+  ["fork", "fork type, tube diameter, travel, spring rate"],
+  ["fork_oil", "fork oil type, quantity per leg, oil level"],
+  ["shock", "shock type, wheel travel, spring rate and installed spring length for the requested market, gas pressure"],
+  ["brakes", "front/rear disc diameter × thickness"],
+  ["brake_pads", "pad thickness new and wear limit"],
+  ["brake_fluid", "brake fluid type"],
+  ["axle_torque", "front/rear axle nut and rear sprocket bolt torques"],
+  ["weight", "weight (state wet/dry)"],
+  ["dimensions", "seat height, wheelbase, ground clearance"],
+];
+
+/** What each stock-setup key means (they map to the app's tuning sheet fields). */
+const STOCK_MEANINGS: Record<string, string> = {
+  main_jet: "main jet size number",
+  pilot_jet: "pilot (slow) jet size number",
+  needle: "jet needle code",
+  clip: "needle clip position (groove number from the top)",
+  air_screw: "air/fuel screw, turns out from lightly seated",
+  slide: "throttle slide cutaway",
+  premix: "fuel:oil premix ratio, e.g. 30:1 (2-strokes only)",
+  oil: "the 2-stroke oil mixed into the fuel (NOT gearbox oil)",
+  fuel: "fuel type / octane",
+  plug: "spark plug type",
+  fork_comp: "fork compression damping standard position, clicks out from fully turned in",
+  fork_reb: "fork rebound damping standard position, clicks out from fully turned in",
+  fork_height: "fork tube height above the top clamp in mm",
+  fork_oil_level: "fork oil level in mm",
+  fork_spring: "fork spring rate in N/mm",
+  shock_lsc: "shock low-speed compression standard position, clicks out from fully in",
+  shock_hsc: "shock high-speed compression standard position, turns out from fully in",
+  shock_reb: "shock rebound standard position, clicks out from fully in",
+  race_sag: "recommended race (rider) sag in mm",
+  static_sag: "recommended static sag in mm",
+  shock_preload: "shock spring installed length in mm",
+  shock_spring: "shock spring rate in N/mm",
+  tyre_f: "front tyre PRESSURE in bar (not the tyre size)",
+  tyre_r: "rear tyre PRESSURE in bar (not the tyre size)",
+  tyres: "stock tyre make/model",
+  sprocket_f: "front sprocket teeth",
+  sprocket_r: "rear sprocket teeth",
+};
+/** Race-based manual intervals are converted at this many riding hours per race. */
+export const HOURS_PER_RACE = 2;
+
+/** Interval in hours: per-race intervals are converted here, so the number can't contradict the notes. */
+export function intervalHours(x: { hours: number | null; every_races?: number | null }) {
+  return x.every_races ? x.every_races * HOURS_PER_RACE : x.hours;
+}
+
 const PREFERRED_TASK_KEYS =
   "air_filter, chain, spark_plug, piston_rings, top_end, transmission_oil, engine_oil, oil_filter, valve_clearance, silencer, fork_oil, shock_service, wheel_bearings, steering_head, brake_fluid, coolant";
 
@@ -93,6 +170,7 @@ const SCHEMA = obj({
       zone: { type: "string", enum: ZONES },
       label_en: str,
       label_hu: str,
+      every_races: { type: ["integer", "null"] },
       hours: { type: ["number", "null"] },
       months: { type: ["integer", "null"] },
       notes_en: str,
@@ -142,6 +220,7 @@ export type LookupResult = {
     zone: string;
     label_en: string;
     label_hu: string;
+    every_races: number | null;
     hours: number | null;
     months: number | null;
     notes_en: string;
@@ -166,19 +245,32 @@ export type LookupResult = {
 
 function prompt(i: LookupInput) {
   const bike = `${i.year} ${i.make} ${i.model}, ${i.engineCc} cc${i.stroke ? `, ${i.stroke}-stroke` : ""}${i.category ? `, ${i.category}` : ""}`;
-  const instructions = `You compile reference data for a motorcycle maintenance app. Use web search. Accuracy matters more than completeness.
+  const checklist = SPEC_CHECKLIST.map(([k, w]) => `  - ${k}: ${w}`).join("\n");
+  const stock = Object.entries(STOCK_MEANINGS)
+    .map(([k, w]) => `  - ${k}: ${w}`)
+    .join("\n");
+  const instructions = `You compile reference data for a motorcycle maintenance app. Use web search. Accuracy matters more than completeness, but once you have a good source, extract everything it covers.
+
+Sources, in order of preference: the manufacturer's owner's/service manual for this model year (often a PDF, or on manualslib.com), OEM parts fiches (cmsnl.com, partzilla.com, boats.net, revzilla.com/oem, the manufacturer's parts site), the manufacturer's own pages, then reputable retailers' fitment lists. Forums only if nothing else exists (say so in warnings).
 
 Rules:
-- Only state a value if a source you found gives it for THIS model year (or explicitly for a year range that includes it). Otherwise leave it out. Never guess.
-- Prefer, in order: manufacturer owner's/service manuals (often hosted on manualslib.com), OEM parts fiches (cmsnl.com, partzilla.com, boats.net, yamaha/ktm/honda parts sites), the manufacturer's own pages, then reputable retailers' fitment lists. Avoid forums unless nothing else exists, and say so in warnings.
-- Market: ${i.market}. If specs differ between markets (jetting, gearing, suspension), give the ${i.market} values in the main fields and mention others in the value text.
-- Metric units. Keep values short (under 160 characters). label_hu in natural Hungarian.
-- Put the page you used in source_url for every item. If the model year/name you were given looks wrong, set identified.matches_request=false and explain in identified.note.
-- specs: use these keys where they apply: ${PREFERRED_SPEC_KEYS}. Other keys are fine for important extra data.
-- intervals: the manufacturer's maintenance schedule. Use hours (convert per-race intervals at ~2 h per race and say so in notes) or months for time-based items. Keys where they apply: ${PREFERRED_TASK_KEYS}.
-- parts: up to 15 commonly replaced parts (plug, chain, sprockets, air filter, brake pads, piston kit, oil filter, plastics, exhaust…). part_number only when a source lists it for this exact model year; otherwise null and a good search_query.
-- stock_setup: factory settings (jets, needle, clip, air screw, clicker positions in clicks/turns out, spring rates, tyre pressures, sprockets). Plain values without units, e.g. "450", "12", "1.5".
-- warnings: anything a rider should double-check.`;
+- Only state a value if a source gives it for THIS model year (or a year range that includes it). Never guess. Plain values, metric units, under 160 characters. label_hu in natural Hungarian.
+- Market: ${i.market}. Manuals often cover several markets and mark the differences with footnotes or columns (e.g. "*For EUROPE", "USA, CDN" vs "EUROPE"). Always take the ${i.market} value for the main fields; mention other markets' values in the text only where the field explains it. Double-check spring rates, spring lengths, jetting, gearing and clicker positions for this.
+- Put the page you used in source_url for every item.
+- If the requested model/year looks wrong, set identified.matches_request=false and explain in identified.note.
+
+specs – read the manual's specification chapter and fill as many of these as it states (key: what):
+${checklist}
+Other keys are fine for important extra data.
+
+intervals – the manufacturer's maintenance chart. For per-race intervals ("every race", "every third race") set every_races (1, 3, 5…) and hours=null; the app converts races to hours. Use hours only when the manual itself states hours; months for time-based items (e.g. coolant every 2 years = 24). Task keys where they apply: ${PREFERRED_TASK_KEYS}.
+
+parts – up to 15 commonly replaced parts (spark plug, chain, front/rear sprocket, air filter, front/rear brake pads, piston kit, top-end gasket kit, fork seals, oil filter for 4-strokes, clutch plates). Read the OEM part numbers from a parts fiche for this exact model and give them with is_oem=true (brand = the manufacturer). Add well-known aftermarket equivalents only where a retailer's fitment list confirms the model year. part_number null if no source shows it.
+
+stock_setup – the factory settings, plain values without units (e.g. "450", "12", "1.5", "1.0"). Clicker positions are in the manual's adjustment/tuning chapter ("standard position"). Keys and their meaning:
+${stock}
+
+warnings – anything a rider should double-check.`;
   return { instructions, input: `Motorcycle: ${bike}.` };
 }
 
@@ -343,7 +435,8 @@ function applyResult(tx: Tx, modelId: string, r: LookupResult, input: LookupInpu
   const tasks = new Set<string>();
   for (const x of r.intervals) {
     const key = x.task_key.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40);
-    if (!key || tasks.has(key) || (x.hours == null && x.months == null)) continue;
+    const hours = intervalHours(x);
+    if (!key || tasks.has(key) || (hours == null && x.months == null)) continue;
     tasks.add(key);
     const src = host(httpUrl(x.source_url));
     tx.insert(s.serviceIntervals)
@@ -353,7 +446,7 @@ function applyResult(tx: Tx, modelId: string, r: LookupResult, input: LookupInpu
         zone: zone(x.zone),
         labelEn: x.label_en,
         labelHu: x.label_hu,
-        intervalHours: x.hours,
+        intervalHours: hours,
         intervalMonths: x.months,
         notesEn: [x.notes_en, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,
         notesHu: [x.notes_hu, src && `AI · ${src}`].filter(Boolean).join(" · ") || null,

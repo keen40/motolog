@@ -6,7 +6,7 @@ import { getDb, schema as s } from "@/db";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusChip } from "@/components/StatusChip";
 import { SubmitButton } from "@/components/SubmitButton";
-import { expireStaleLookup, type LookupResult } from "@/lib/ai/lookup";
+import { expireStaleLookup, intervalHours, type LookupResult } from "@/lib/ai/lookup";
 import { requireUser } from "@/lib/auth";
 import { loadIntervals, loadModel, loadParts, loadSpecs } from "@/lib/data";
 import { fill, getI18n } from "@/lib/i18n";
@@ -77,7 +77,7 @@ export default async function LookupPage({ params }: PageProps<"/catalogue/looku
         key: k,
         label: (hu ? (c?.labelHu ?? a?.label_hu) : (c?.labelEn ?? a?.label_en)) ?? k,
         current: c ? every(c.intervalHours, c.intervalMonths) : null,
-        ai: a ? every(a.hours, a.months) : null,
+        ai: a ? `${a.every_races ? `${a.every_races}× 🏁 → ` : ""}${every(intervalHours(a), a.months)}` : null,
         source: a?.source_url,
       };
     });
