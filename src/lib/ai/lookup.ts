@@ -39,7 +39,7 @@ const SPEC_CHECKLIST: [key: string, what: string][] = [
   ["coolant", "coolant capacity and radiator cap pressure"],
   ["air_filter_oil", "air filter type and oil"],
   ["chain", "drive chain size, make/type and number of links"],
-  ["gearing", "stock front/rear sprocket teeth for the requested market"],
+  ["gearing", "stock front/rear sprocket teeth for the requested market (the secondary reduction ratio, e.g. 48/13)"],
   ["chain_slack", "chain slack"],
   ["chain_wear", "chain wear limit (length over N links)"],
   ["tyre_f", "front tyre size (and rim size)"],
@@ -51,7 +51,7 @@ const SPEC_CHECKLIST: [key: string, what: string][] = [
   ["brakes", "front/rear disc diameter × thickness"],
   ["brake_pads", "pad thickness new and wear limit"],
   ["brake_fluid", "brake fluid type"],
-  ["axle_torque", "front/rear axle nut and rear sprocket bolt torques"],
+  ["axle_torque", "all three: front axle nut, rear axle nut and rear sprocket bolt torques"],
   ["weight", "weight (state wet/dry)"],
   ["dimensions", "seat height, wheelbase, ground clearance"],
 ];
@@ -254,7 +254,8 @@ function prompt(i: LookupInput) {
 Sources, in order of preference: the manufacturer's owner's/service manual for this model year (often a PDF, or on manualslib.com), OEM parts fiches (cmsnl.com, partzilla.com, boats.net, revzilla.com/oem, the manufacturer's parts site), the manufacturer's own pages, then reputable retailers' fitment lists. Forums only if nothing else exists (say so in warnings).
 
 Rules:
-- Only state a value if a source gives it for THIS model year (or a year range that includes it). Never guess. Plain values, metric units, under 160 characters. label_hu in natural Hungarian.
+- Only state a value if a source gives it for THIS model year (or a year range that includes it). Never guess. Plain values, metric units, under 160 characters.
+- Language: value, notes_en, summary_en, identified.note and warnings in English with "." as the decimal point (values are shown in both languages). Only label_hu, notes_hu and summary_hu in Hungarian.
 - Market: ${i.market}. Manuals often cover several markets and mark the differences with footnotes or columns (e.g. "*For EUROPE", "USA, CDN" vs "EUROPE"). Always take the ${i.market} value for the main fields; mention other markets' values in the text only where the field explains it. Double-check spring rates, spring lengths, jetting, gearing and clicker positions for this.
 - Put the page you used in source_url for every item.
 - If the requested model/year looks wrong, set identified.matches_request=false and explain in identified.note.
@@ -263,7 +264,7 @@ specs – read the manual's specification chapter and fill as many of these as i
 ${checklist}
 Other keys are fine for important extra data.
 
-intervals – the manufacturer's maintenance chart. For per-race intervals ("every race", "every third race") set every_races (1, 3, 5…) and hours=null; the app converts races to hours. Use hours only when the manual itself states hours; months for time-based items (e.g. coolant every 2 years = 24). Task keys where they apply: ${PREFERRED_TASK_KEYS}.
+intervals – the manufacturer's maintenance chart. Exactly one entry per task_key, for the main action (replace / change / clean), not for "inspect" – e.g. top_end = piston replacement, silencer = cleaning/repacking. For per-race intervals ("every race", "every third race") set every_races (1, 3, 5…) and hours=null; the app converts races to hours. Use hours only when the manual itself states hours; months for time-based items (e.g. coolant every 2 years = 24). Task keys where they apply: ${PREFERRED_TASK_KEYS}.
 
 parts – up to 15 commonly replaced parts (spark plug, chain, front/rear sprocket, air filter, front/rear brake pads, piston kit, top-end gasket kit, fork seals, oil filter for 4-strokes, clutch plates). Read the OEM part numbers from a parts fiche for this exact model and give them with is_oem=true (brand = the manufacturer). Add well-known aftermarket equivalents only where a retailer's fitment list confirms the model year. part_number null if no source shows it.
 
@@ -293,7 +294,7 @@ async function callOpenAI(input: LookupInput) {
       model: cfg.model,
       instructions,
       input: userInput,
-      tools: [{ type: "web_search", search_context_size: "medium", user_location: { type: "approximate", country: "HU" } }],
+      tools: [{ type: "web_search", search_context_size: "medium" }],
       max_tool_calls: cfg.maxSearches,
       include: ["web_search_call.action.sources"],
       max_output_tokens: 16000,
@@ -385,6 +386,17 @@ async function runLookup(lookupId: string) {
   }
 }
 
+/** One interval per task: if the AI listed a task twice (inspect + replace), keep the longest one. */
+export function dedupeIntervals<T extends { task_key: string; hours: number | null; every_races?: number | null; months: number | null }>(list: T[]) {
+  const size = (x: T) => (intervalHours(x) ?? 0) * 1000 + (x.months ?? 0);
+  const best = new Map<string, T>();
+  for (const x of list) {
+    const cur = best.get(x.task_key);
+    if (!cur || size(x) > size(cur)) best.set(x.task_key, x);
+  }
+  return [...best.values()];
+}
+
 const httpUrl = (u: string | null) => (u && /^https?:\/\//i.test(u) ? u : null);
 const host = (u: string | null) => {
   try {
@@ -433,7 +445,7 @@ function applyResult(tx: Tx, modelId: string, r: LookupResult, input: LookupInpu
 
   tx.delete(s.serviceIntervals).where(eq(s.serviceIntervals.modelId, modelId)).run();
   const tasks = new Set<string>();
-  for (const x of r.intervals) {
+  for (const x of dedupeIntervals(r.intervals)) {
     const key = x.task_key.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40);
     const hours = intervalHours(x);
     if (!key || tasks.has(key) || (hours == null && x.months == null)) continue;
