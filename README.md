@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MotoLog
 
-## Getting Started
+A personal, self-hosted log for your motorcycles: every service, modification, repair and planned upgrade, with an
+interactive bike map, build timeline, cost and service stats, a plan board, model specs, compatible parts and
+shops that ship to Hungary. Share bikes with family and friends (view-only or edit).
 
-First, run the development server:
+**Stack:** Next.js 16 · TypeScript · Tailwind CSS 4 · SQLite (better-sqlite3 + Drizzle) · Recharts.
+Runs as one Docker container behind the host's `tailscale serve`. No login screen: Tailscale tells the app who you are.
+UI in Hungarian and English.
+
+## Run on the server (Docker + host Tailscale)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <this repo> ~/motolog && cd ~/motolog      # or copy the folder over
+mkdir -p data && sudo chown 1000:1000 data          # the app runs as uid 1000
+docker compose up -d --build
+sudo tailscale serve --bg --https=8451 http://127.0.0.1:3010
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `https://home-server.<tailnet>.ts.net:8451` from any device on your tailnet.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Everyone who can reach it over the tailnet gets their own garage. To share a bike, open it → **Sharing** →
+enter their Tailscale login (e-mail) → *Can view* or *Can edit*.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Why it's safe without a login
 
-## Learn More
+The container is published on `127.0.0.1:3010` only, so the only way in is `tailscale serve`, which adds the
+`Tailscale-User-Login` / `-Name` / `-Profile-Pic` headers. **Don't** publish the port on `0.0.0.0` or enable Funnel:
+anyone who can reach the app directly could fake those headers.
 
-To learn more about Next.js, take a look at the following resources:
+### Switching to Authentik later
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Put the app behind an Authentik proxy outpost (forward auth) and set `AUTH_MODE=header`. The app reads
+`X-authentik-email` / `X-authentik-name` (configurable via `AUTH_EMAIL_HEADER` / `AUTH_NAME_HEADER`). Users are matched
+by e-mail, so keep the same e-mail as the Tailscale login if you want to keep existing garages.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Backups
 
-## Deploy on Vercel
+Everything lives in `./data`: `motolog.db` (SQLite) and `photos/`. Stop the stack (or use `sqlite3 motolog.db ".backup x.db"`)
+and copy the folder.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Updating
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+git pull && docker compose up -d --build
+```
+
+Database migrations (`drizzle/`) and reference data (`src/db/seed.ts`) are applied automatically on start.
+
+## Develop locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. In dev mode you're `me@dev.local`; the **dev** switch in the header lets you become
+`friend@dev.local` to test sharing. Data goes to `./data`.
+
+After changing `src/db/schema.ts`, create a migration with `npx drizzle-kit generate`.
+
+## How the reference data works
+
+| Data | Source |
+| --- | --- |
+| Model specs | Seeded starter values shown as *unverified* until someone confirms them against their manual. Anyone can correct a value (with a source) or add specs. |
+| Service intervals | Typical intervals per model, used for the “due in X h” schedule. |
+| Compatible parts | Seeded brand suggestions + your own. OEM part numbers: use the linked CMSNL parts catalogue. |
+| Shops | Search-link templates (`{q}` → query) for shops that ship to Hungary. No APIs, no scraping. |
+
+To add another model, add a block like `YZ125_2001` in `src/db/seed.ts` and bump `SEED_VERSION`.
+Seed rows are upserted by stable keys, so your data and confirmations survive.
+
+## Layout
+
+```
+Dockerfile, docker-compose.yml   deployment
+drizzle/            SQL migrations (generated)
+src/db/             schema, connection (auto-migrate + seed), reference data
+src/lib/auth.ts     identity from Tailscale / SSO headers (or dev user)
+src/lib/access.ts   owner / editor / viewer checks
+src/app/            pages, server actions, /photos/[id] (access-checked images)
+src/components/     BikeDiagram, Timeline, PlanBoard, StatsCharts, SpecsPanel, PartsFinder, SharePanel, ...
+```
