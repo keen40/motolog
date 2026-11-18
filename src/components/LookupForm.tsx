@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { lookupModel, type LookupFormState } from "@/app/catalogue/actions";
 import { useI18n } from "@/lib/i18n/client";
 import { SubmitButton } from "./SubmitButton";
@@ -13,6 +13,10 @@ export function LookupForm({ disabled }: { disabled: "noKey" | "limit" | null })
   const [state, action] = useActionState<LookupFormState, FormData>(lookupModel, { error: null });
   const error = state.error ?? disabled;
   const year = new Date().getFullYear();
+  const [make, setMake] = useState("");
+  const [modelYear, setModelYear] = useState("");
+  const makes = useSuggestions(make.trim().length >= 1 ? `q=${encodeURIComponent(make.trim())}` : "q=");
+  const models = useSuggestions(make.trim() ? `make=${encodeURIComponent(make.trim())}&year=${/^\d{4}$/.test(modelYear) ? modelYear : ""}` : null);
 
   return (
     <form action={action} id="lookup" className="card space-y-4 p-4 sm:p-6">
@@ -25,13 +29,34 @@ export function LookupForm({ disabled }: { disabled: "noKey" | "limit" | null })
           <label className="label" htmlFor="make">
             {t.catalogue.make} *
           </label>
-          <input id="make" name="make" required maxLength={40} placeholder="Yamaha" className="input" />
+          <input
+            id="make"
+            name="make"
+            required
+            maxLength={40}
+            placeholder="Yamaha"
+            list="make-suggestions"
+            autoComplete="off"
+            value={make}
+            onChange={(e) => setMake(e.target.value)}
+            className="input"
+          />
+          <datalist id="make-suggestions">
+            {makes.map((m) => (
+              <option key={m} value={m} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="label" htmlFor="model">
             {t.catalogue.model} *
           </label>
-          <input id="model" name="model" required maxLength={60} placeholder="YZ125" className="input" />
+          <input id="model" name="model" required maxLength={60} placeholder="YZ125" list="model-suggestions" autoComplete="off" className="input" />
+          <datalist id="model-suggestions">
+            {models.map((m) => (
+              <option key={m} value={m} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="label" htmlFor="engine_cc">
@@ -43,7 +68,19 @@ export function LookupForm({ disabled }: { disabled: "noKey" | "limit" | null })
           <label className="label" htmlFor="year">
             {t.catalogue.year} *
           </label>
-          <input id="year" name="year" type="number" required min={1950} max={year + 1} inputMode="numeric" placeholder="2001" className="input" />
+          <input
+            id="year"
+            name="year"
+            type="number"
+            required
+            min={1950}
+            max={year + 1}
+            inputMode="numeric"
+            placeholder="2001"
+            value={modelYear}
+            onChange={(e) => setModelYear(e.target.value)}
+            className="input"
+          />
         </div>
         <div>
           <label className="label" htmlFor="stroke">
@@ -87,4 +124,24 @@ export function LookupForm({ disabled }: { disabled: "noKey" | "limit" | null })
       {error && <p className="rounded-xl bg-red-950/40 px-3 py-2 text-sm text-red-300">{t.catalogue[error]}</p>}
     </form>
   );
+}
+
+/** Fetches autocomplete names (debounced). `query` null = no suggestions. */
+function useSuggestions(query: string | null) {
+  const [list, setList] = useState<string[]>([]);
+  useEffect(() => {
+    if (query == null) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/catalogue/names?${query}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((v: string[]) => setList(v))
+        .catch(() => {});
+    }, 250);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [query]);
+  return query == null ? [] : list;
 }
