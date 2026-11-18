@@ -18,7 +18,7 @@ tmp="$(mktemp -d)"
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -rf "$tmp"; }
 trap cleanup EXIT
 
-echo "→ restoring $(basename "$archive") ($(du -h "$archive" | cut -f1))"
+echo "$(date '+%F %T') restore drill: $(basename "$archive") ($(du -h "$archive" | cut -f1))"
 tar -xzf "$archive" -C "$tmp"
 mv "$tmp/backup-snapshot.db" "$tmp/motolog.db"
 mkdir -p "$tmp/photos"

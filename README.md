@@ -96,6 +96,13 @@ garage renders; cleans up after itself):
 ~/motolog/scripts/restore-test.sh <archive.tar.gz> # a specific one
 ```
 
+It also runs automatically at 03:45 on the 1st of every month (right after that night's backup), logging to
+`/mnt/data/backups/motolog/backup.log` – look for `RESTORE TEST PASSED` / `FAILED`:
+
+```
+45 3 1 * * $HOME/motolog/scripts/restore-test.sh >> /mnt/data/backups/motolog/backup.log 2>&1
+```
+
 ## Develop locally
 
 ```bash
